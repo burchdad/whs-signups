@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import { getAdminMetrics } from "@/lib/repository";
 
 export const metadata = { title: "Admin Dashboard" };
+export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
   await requireAdmin();

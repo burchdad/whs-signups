@@ -4,6 +4,8 @@ import { BrandHeader } from "@/components/brand-header";
 import { EventCard } from "@/components/event-card";
 import { listPublicEvents } from "@/lib/repository";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const upcomingEvents = (await listPublicEvents()).slice(0, 3);
   return (

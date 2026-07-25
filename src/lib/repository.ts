@@ -8,7 +8,8 @@ import type { SignupInput } from "./validation";
 
 export async function listPublicEvents() {
   if (!hasDatabaseUrl()) return events.filter((event) => event.isPublished && !event.isArchived);
-  const { rows } = await getPool().query(`
+  try {
+    const { rows } = await getPool().query(`
     select
       e.*,
       coalesce(sp.name, '') as sport_name,
@@ -51,8 +52,12 @@ export async function listPublicEvents() {
     where e.is_published = true and e.is_archived = false
     group by e.id, sp.name, se.name
     order by e.starts_at asc
-  `);
-  return rows.map(rowToEvent);
+    `);
+    return rows.map(rowToEvent);
+  } catch (error) {
+    if (isMissingDatabaseSchema(error)) return events.filter((event) => event.isPublished && !event.isArchived);
+    throw error;
+  }
 }
 
 export async function getPublicEventBySlug(slug: string) {
@@ -88,7 +93,8 @@ export async function getAdminMetrics() {
 
 export async function getTemplates(): Promise<VolunteerTemplate[]> {
   if (!hasDatabaseUrl()) return templates;
-  const { rows } = await getPool().query(`
+  try {
+    const { rows } = await getPool().query(`
     select
       vt.id,
       vt.name,
@@ -103,13 +109,17 @@ export async function getTemplates(): Promise<VolunteerTemplate[]> {
     left join volunteer_template_slots vts on vts.template_id = vt.id
     group by vt.id
     order by vt.name
-  `);
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    slots: row.slots,
-  }));
+    `);
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      slots: row.slots,
+    }));
+  } catch (error) {
+    if (isMissingDatabaseSchema(error)) return templates;
+    throw error;
+  }
 }
 
 export type SignupResult =
@@ -333,4 +343,8 @@ function optionalIso(value: unknown) {
 function toDateOnly(value: unknown) {
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   return String(value).slice(0, 10);
+}
+
+function isMissingDatabaseSchema(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "42P01";
 }

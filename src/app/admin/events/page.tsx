@@ -4,6 +4,7 @@ import { listAdminEvents } from "@/lib/repository";
 import { formatDate } from "@/lib/utils";
 
 export const metadata = { title: "Manage Events" };
+export const dynamic = "force-dynamic";
 
 export default async function AdminEventsPage() {
   const events = await listAdminEvents();
