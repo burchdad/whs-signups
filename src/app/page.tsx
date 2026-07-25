@@ -4,6 +4,7 @@ import { ArrowRight, CheckCircle2, Trophy } from "lucide-react";
 import { BrandHeader } from "@/components/brand-header";
 import { EventCard } from "@/components/event-card";
 import { listPublicEvents } from "@/lib/repository";
+import { sportsOffered } from "@/lib/sports";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,13 @@ export default async function Home() {
                   Admin login
                 </Link>
               </div>
+              <form action="/events" className="mt-6 grid max-w-xl gap-2 rounded-sm border border-white/25 bg-black/18 p-3 sm:grid-cols-[1fr_auto]">
+                <label className="sr-only" htmlFor="home-sport">Choose sport</label>
+                <select id="home-sport" name="sport" defaultValue="Volleyball" className="min-h-12 rounded-sm border border-white/20 bg-white px-3 font-black uppercase tracking-wide text-[var(--ink)]">
+                  {sportsOffered.map((sport) => <option key={sport} value={sport}>{sport}</option>)}
+                </select>
+                <button className="min-h-12 rounded-sm bg-[var(--gold)] px-5 font-black uppercase tracking-wide text-black hover:bg-white">Find signups</button>
+              </form>
             </div>
             <div className="wildcat-card rounded-sm p-6 text-[var(--foreground)]">
               <div className="flex items-center gap-4 border-b border-[var(--border)] pb-4">

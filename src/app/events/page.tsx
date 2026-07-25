@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { BrandHeader } from "@/components/brand-header";
 import { EventCard } from "@/components/event-card";
 import { eventOpenPositions } from "@/lib/availability";
 import { listPublicEvents } from "@/lib/repository";
+import { sportsOffered } from "@/lib/sports";
 
 export const metadata = { title: "Events" };
 
@@ -20,11 +22,12 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
     <>
       <BrandHeader />
       <main className="container py-8">
-        <p className="eyebrow text-[var(--maroon)]">Whitehouse volleyball</p>
+        <p className="eyebrow text-[var(--maroon)]">Whitehouse athletics</p>
         <h1 className="mt-1 text-4xl font-black uppercase text-[var(--ink)]">Volunteer schedule</h1>
         <form className="wildcat-card mt-5 grid gap-3 rounded-sm p-4 sm:grid-cols-4">
           <select name="sport" defaultValue={params.sport ?? ""} className="min-h-11 rounded-sm border border-[var(--border)] px-3 font-semibold">
-            <option value="">All sports</option><option>Volleyball</option>
+            <option value="">All sports</option>
+            {sportsOffered.map((sport) => <option key={sport} value={sport}>{sport}</option>)}
           </select>
           <select name="type" defaultValue={params.type ?? ""} className="min-h-11 rounded-sm border border-[var(--border)] px-3 font-semibold">
             <option value="">All event types</option><option>Home Game</option><option>Tournament</option>
@@ -37,7 +40,16 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
           </select>
           <button className="min-h-11 rounded-sm bg-[var(--maroon)] px-4 font-black uppercase tracking-wide text-white sm:col-span-4">Apply filters</button>
         </form>
-        <div className="mt-6 grid gap-4 md:grid-cols-2">{filtered.map((event) => <EventCard key={event.id} event={event} />)}</div>
+        {filtered.length > 0 ? (
+          <div className="mt-6 grid gap-4 md:grid-cols-2">{filtered.map((event) => <EventCard key={event.id} event={event} />)}</div>
+        ) : (
+          <section className="wildcat-card mt-6 rounded-sm p-8">
+            <p className="eyebrow text-[var(--maroon)]">No posted signups yet</p>
+            <h2 className="mt-2 text-2xl font-black uppercase text-[var(--ink)]">No volunteer events match that sport.</h2>
+            <p className="mt-2 font-medium text-[var(--muted)]">Volleyball signups are live now. More Whitehouse sports can be added when their volunteer schedules are ready.</p>
+            <Link href="/events?sport=Volleyball" className="mt-5 inline-flex min-h-11 items-center rounded-sm bg-[var(--maroon)] px-4 font-black uppercase tracking-wide text-white">View volleyball</Link>
+          </section>
+        )}
       </main>
     </>
   );

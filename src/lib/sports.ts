@@ -1,0 +1,18 @@
+export const sportsOffered = [
+  "Baseball",
+  "Baseball (Boys)",
+  "Basketball (Boys)",
+  "Basketball (Girls)",
+  "Cheerleading (Girls)",
+  "Cross Country (Coed)",
+  "Football (Boys)",
+  "Football",
+  "Soccer (Boys)",
+  "Soccer (Girls)",
+  "Softball",
+  "Swimming and Diving (Coed)",
+  "Track and Field (Boys)",
+  "Track and Field (Girls)",
+  "Volleyball",
+  "Volleyball (Girls)",
+];
