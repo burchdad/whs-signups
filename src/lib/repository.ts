@@ -4,7 +4,7 @@ import { events, organization, sampleSignups, templates } from "./demo-data";
 import { createToken, hashToken, verifyToken } from "./tokens";
 import type { Signup, VolunteerEvent, VolunteerTemplate } from "./types";
 import { normalizeEmail } from "./utils";
-import type { SignupInput } from "./validation";
+import type { BoosterClubSignupInput, SignupInput } from "./validation";
 
 export async function listPublicEvents() {
   if (!hasDatabaseUrl()) return events.filter((event) => event.isPublished && !event.isArchived);
@@ -126,6 +126,10 @@ export type SignupResult =
   | { ok: true; signup: Signup; cancellationToken: string }
   | { ok: false; code: "slot_full" | "event_closed" | "slot_closed" | "not_found"; message: string };
 
+export type BoosterClubSignupResult =
+  | { ok: true; id: string }
+  | { ok: false; code: "not_ready" | "failed"; message: string };
+
 export async function createSignup(input: SignupInput): Promise<SignupResult> {
   if (hasDatabaseUrl()) {
     try {
@@ -223,6 +227,48 @@ export async function createSignup(input: SignupInput): Promise<SignupResult> {
       createdAt: new Date().toISOString(),
     },
   };
+}
+
+export async function createBoosterClubSignup(input: BoosterClubSignupInput): Promise<BoosterClubSignupResult> {
+  if (!hasDatabaseUrl()) return { ok: true, id: crypto.randomUUID() };
+
+  try {
+    const { rows } = await getPool().query(
+      `
+      with org as (
+        select id
+        from organizations
+        order by created_at asc
+        limit 1
+      )
+      insert into booster_club_signups (
+        organization_id, first_name, last_name, email, normalized_email, phone,
+        gear_preference, open_to_volunteering, interested_in_sponsoring
+      )
+      select
+        org.id, $1, $2, $3, $4, $5, $6, $7, $8
+      from org
+      returning id
+      `,
+      [
+        input.firstName.trim(),
+        input.lastName.trim(),
+        input.email.trim(),
+        normalizeEmail(input.email),
+        input.phone.trim(),
+        input.gearPreference,
+        input.openToVolunteering === "yes",
+        input.interestedInSponsoring === "yes",
+      ],
+    );
+    if (!rows[0]) return { ok: false, code: "not_ready", message: "Booster Club signups are not ready yet. Please try again soon." };
+    return { ok: true, id: String(rows[0].id) };
+  } catch (error) {
+    if (isMissingDatabaseSchema(error)) {
+      return { ok: false, code: "not_ready", message: "Booster Club signups are being set up. Please try again soon." };
+    }
+    return { ok: false, code: "failed", message: "We could not complete the Booster Club signup. Please try again." };
+  }
 }
 
 export async function getCancellationByToken(token: string) {

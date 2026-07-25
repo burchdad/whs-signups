@@ -36,6 +36,7 @@ export function BrandHeader() {
             </div>
           </details>
           <Link href="/events" className="px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white">Events</Link>
+          <Link href="/booster-club" className="px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white">Booster Club</Link>
           <Link href="/contact" className="px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white">Contact</Link>
           <Link href="/admin" className="rounded-sm border border-[var(--gold)] px-3 py-2 text-[var(--gold)] hover:bg-[var(--gold)] hover:text-black">Admin</Link>
         </nav>

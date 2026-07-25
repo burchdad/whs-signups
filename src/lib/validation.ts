@@ -13,3 +13,17 @@ export const signupSchema = z.object({
 });
 
 export type SignupInput = z.infer<typeof signupSchema>;
+
+export const boosterClubSignupSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required.").max(80),
+  lastName: z.string().trim().min(1, "Last name is required.").max(80),
+  email: z.string().trim().email("Enter a valid email address.").max(200),
+  phone: z.string().trim().min(7, "Enter a phone number.").max(40),
+  gearPreference: z.enum(["hat", "shirt"], { error: "Choose hat or shirt." }),
+  openToVolunteering: z.enum(["yes", "no"], { error: "Choose whether you are open to volunteering." }),
+  interestedInSponsoring: z.enum(["yes", "no"], { error: "Choose whether you are interested in sponsoring." }),
+  consent: z.literal("on", { error: "Please accept the Booster Club signup terms." }),
+  turnstileToken: z.string().optional(),
+});
+
+export type BoosterClubSignupInput = z.infer<typeof boosterClubSignupSchema>;

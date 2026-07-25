@@ -11,3 +11,4 @@ values ('31111111-1111-4111-8111-111111111111', '11111111-1111-4111-8111-1111111
 on conflict do nothing;
 
 \ir ../migrations/002_replace_2026_home_games.sql
+\ir ../migrations/003_booster_club_signups.sql

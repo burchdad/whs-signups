@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, CheckCircle2, Trophy } from "lucide-react";
+import { ArrowRight, CheckCircle2, HandHeart, Shirt, Trophy } from "lucide-react";
 import { BrandHeader } from "@/components/brand-header";
 import { EventCard } from "@/components/event-card";
 import { listPublicEvents } from "@/lib/repository";
@@ -24,17 +24,30 @@ export default async function Home() {
                 <Link href="/events" className="inline-flex min-h-12 items-center gap-2 rounded-sm bg-[var(--gold)] px-5 font-black uppercase tracking-wide text-black hover:bg-white">
                   View all events <ArrowRight size={18} aria-hidden />
                 </Link>
+                <Link href="/booster-club" className="inline-flex min-h-12 items-center gap-2 rounded-sm border border-[var(--gold)] px-5 font-black uppercase tracking-wide text-[var(--gold)] hover:bg-[var(--gold)] hover:text-black">
+                  Booster Club <HandHeart size={18} aria-hidden />
+                </Link>
                 <Link href="/admin/login" className="inline-flex min-h-12 items-center rounded-sm border border-white/30 px-5 font-black uppercase tracking-wide text-white hover:bg-white/10">
                   Admin login
                 </Link>
               </div>
-              <form action="/events" className="mt-6 grid max-w-xl gap-2 rounded-sm border border-white/25 bg-black/18 p-3 sm:grid-cols-[1fr_auto]">
-                <label className="sr-only" htmlFor="home-sport">Choose sport</label>
-                <select id="home-sport" name="sport" defaultValue="Volleyball" className="min-h-12 rounded-sm border border-white/20 bg-white px-3 font-black uppercase tracking-wide text-[var(--ink)]">
-                  {sportsOffered.map((sport) => <option key={sport} value={sport}>{sport}</option>)}
-                </select>
-                <button className="min-h-12 rounded-sm bg-[var(--gold)] px-5 font-black uppercase tracking-wide text-black hover:bg-white">Find signups</button>
-              </form>
+              <div className="mt-6 max-w-2xl rounded-sm border border-white/25 bg-black/18 p-3">
+                <div className="grid gap-2 text-sm font-black uppercase tracking-wide sm:grid-cols-2" role="tablist" aria-label="Signup type">
+                  <Link href="/events" role="tab" aria-selected="true" className="flex min-h-11 items-center justify-center gap-2 rounded-sm bg-white text-[var(--maroon-dark)]">
+                    <Trophy size={17} aria-hidden /> Event Volunteers
+                  </Link>
+                  <Link href="/booster-club" role="tab" aria-selected="false" className="flex min-h-11 items-center justify-center gap-2 rounded-sm border border-white/25 text-white hover:bg-white/10">
+                    <Shirt size={17} aria-hidden /> Booster Club
+                  </Link>
+                </div>
+                <form action="/events" className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <label className="sr-only" htmlFor="home-sport">Choose sport</label>
+                  <select id="home-sport" name="sport" defaultValue="Volleyball" className="min-h-12 rounded-sm border border-white/20 bg-white px-3 font-black uppercase tracking-wide text-[var(--ink)]">
+                    {sportsOffered.map((sport) => <option key={sport} value={sport}>{sport}</option>)}
+                  </select>
+                  <button className="min-h-12 rounded-sm bg-[var(--gold)] px-5 font-black uppercase tracking-wide text-black hover:bg-white">Find signups</button>
+                </form>
+              </div>
             </div>
             <div className="wildcat-card rounded-sm p-6 text-[var(--foreground)]">
               <div className="flex items-center gap-4 border-b border-[var(--border)] pb-4">
