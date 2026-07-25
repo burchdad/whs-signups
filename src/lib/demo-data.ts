@@ -10,134 +10,90 @@ export const organization = {
 
 export const templates: VolunteerTemplate[] = [
   {
-    id: "22222222-2222-4222-8222-222222222221",
-    name: "Volleyball Home Game",
-    description: "Standard home-game volunteer needs for volleyball match nights.",
+    id: "22222222-2222-4222-8222-222222222223",
+    name: "WHS Volleyball Game Volunteers",
+    description: "Every home event needs six student volunteers and two adult volunteers.",
     slots: [
-      { name: "Concession Stand - Early Shift", category: "Concessions", capacity: 3, sortOrder: 1 },
-      { name: "Concession Stand - Late Shift", category: "Concessions", capacity: 3, sortOrder: 2 },
-      { name: "Ticket Table", category: "Admissions", capacity: 2, sortOrder: 3 },
-      { name: "Scorebook", category: "Game Support", capacity: 1, sortOrder: 4 },
-      { name: "Line Judge", category: "Game Support", capacity: 2, sortOrder: 5 },
-      { name: "Hospitality", category: "Hospitality", capacity: 2, sortOrder: 6 },
-      { name: "Cleanup Crew", category: "Facilities", capacity: 3, sortOrder: 7 },
-    ],
-  },
-  {
-    id: "22222222-2222-4222-8222-222222222222",
-    name: "Volleyball Tournament",
-    description: "Expanded template for tournament days and multi-match events.",
-    slots: [
-      { name: "Morning Concessions", category: "Concessions", capacity: 4, sortOrder: 1 },
-      { name: "Afternoon Concessions", category: "Concessions", capacity: 4, sortOrder: 2 },
-      { name: "Evening Concessions", category: "Concessions", capacity: 4, sortOrder: 3 },
-      { name: "Admissions", category: "Admissions", capacity: 3, sortOrder: 4 },
-      { name: "Hospitality Room", category: "Hospitality", capacity: 3, sortOrder: 5 },
-      { name: "Court Assistance", category: "Game Support", capacity: 4, sortOrder: 6 },
-      { name: "Cleanup Crew", category: "Facilities", capacity: 4, sortOrder: 7 },
-      { name: "Food or Drink Donations", category: "Donations", capacity: 10, sortOrder: 8 },
+      { name: "Student Volunteer", category: "Student Volunteers", capacity: 6, sortOrder: 1 },
+      { name: "Adult Volunteer", category: "Adult Volunteers", capacity: 2, sortOrder: 2 },
     ],
   },
 ];
 
-export const events: VolunteerEvent[] = [
-  {
-    id: "33333333-3333-4333-8333-333333333331",
+type EventSeed = {
+  idSuffix: string;
+  date: string;
+  start: string;
+  end: string;
+  title: string;
+  slug: string;
+  opponent?: string;
+  eventType: string;
+  description?: string;
+  ninth: string;
+  jv: string;
+  varsity: string;
+};
+
+const eventSeeds: EventSeed[] = [
+  { idSuffix: "401", date: "2026-08-07", start: "09:00", end: "13:30", title: "Home Scrimmage - Carthage, Bullard & Lindale", slug: "home-scrimmage-carthage-bullard-lindale-2026-08-07", eventType: "Scrimmage", description: "Home scrimmage", ninth: "09:00", jv: "09:00", varsity: "09:00" },
+  { idSuffix: "402", date: "2026-08-08", start: "09:00", end: "13:30", title: "Home Scrimmage - PT, Bullard & Tyler", slug: "home-scrimmage-pt-bullard-tyler-2026-08-08", eventType: "Scrimmage", description: "Home scrimmage", ninth: "09:00", jv: "09:00", varsity: "09:00" },
+  { idSuffix: "403", date: "2026-09-01", start: "17:00", end: "19:30", title: "Whitehouse vs. Lufkin", slug: "whitehouse-vs-lufkin-2026-09-01", opponent: "Lufkin", eventType: "Home Game", ninth: "17:00", jv: "17:00", varsity: "18:00" },
+  { idSuffix: "404", date: "2026-09-03", start: "08:00", end: "18:00", title: "Whitehouse Volleyball Tournament - Day 1", slug: "whitehouse-volleyball-tournament-day-1-2026-09-03", eventType: "Tournament", description: "Varsity tournament; ending time not listed", ninth: "08:00", jv: "08:00", varsity: "09:00" },
+  { idSuffix: "405", date: "2026-09-05", start: "08:00", end: "18:00", title: "Whitehouse Volleyball Tournament - Day 2", slug: "whitehouse-volleyball-tournament-day-2-2026-09-05", eventType: "Tournament", description: "Varsity tournament; ending time not listed", ninth: "08:00", jv: "08:00", varsity: "09:00" },
+  { idSuffix: "406", date: "2026-09-04", start: "16:30", end: "19:00", title: "Whitehouse vs. Van", slug: "whitehouse-vs-van-2026-09-04", opponent: "Van", eventType: "Home Game", ninth: "17:30", jv: "17:30", varsity: "16:30" },
+  { idSuffix: "407", date: "2026-09-08", start: "17:00", end: "19:30", title: "Whitehouse vs. Hallsville", slug: "whitehouse-vs-hallsville-2026-09-08", opponent: "Hallsville", eventType: "Home Game", ninth: "17:00", jv: "17:00", varsity: "18:00" },
+  { idSuffix: "408", date: "2026-09-18", start: "16:30", end: "19:00", title: "Whitehouse vs. Mt. Pleasant", slug: "whitehouse-vs-mt-pleasant-2026-09-18", opponent: "Mt. Pleasant", eventType: "Home Game", ninth: "17:30", jv: "17:30", varsity: "16:30" },
+  { idSuffix: "409", date: "2026-10-06", start: "17:00", end: "19:30", title: "Whitehouse vs. Marshall", slug: "whitehouse-vs-marshall-2026-10-06", opponent: "Marshall", eventType: "Home Game", ninth: "17:00", jv: "17:00", varsity: "18:00" },
+  { idSuffix: "410", date: "2026-10-09", start: "16:30", end: "19:00", title: "Whitehouse vs. Tyler High", slug: "whitehouse-vs-tyler-high-2026-10-09", opponent: "Tyler High", eventType: "Home Game", ninth: "17:30", jv: "17:30", varsity: "16:30" },
+  { idSuffix: "411", date: "2026-10-16", start: "16:30", end: "19:00", title: "Whitehouse vs. Texas High", slug: "whitehouse-vs-texas-high-2026-10-16", opponent: "Texas High", eventType: "Home Game", ninth: "17:30", jv: "17:30", varsity: "16:30" },
+  { idSuffix: "412", date: "2026-10-20", start: "17:00", end: "19:30", title: "Whitehouse vs. Nacogdoches", slug: "whitehouse-vs-nacogdoches-2026-10-20", opponent: "Nacogdoches", eventType: "Home Game", ninth: "17:00", jv: "17:00", varsity: "18:00" },
+];
+
+export const events: VolunteerEvent[] = eventSeeds.map((seed, index) => {
+  const eventId = `33333333-3333-4333-8333-333333333${seed.idSuffix}`;
+  return {
+    id: eventId,
     organizationId: organization.id,
     sport: "Volleyball",
     season: "2026",
-    title: "Whitehouse vs Tyler Legacy",
-    slug: "whitehouse-vs-tyler-legacy-2026-08-18",
-    opponent: "Tyler Legacy",
-    eventType: "Home Game",
-    eventDate: "2026-08-18",
-    startsAt: "2026-08-18T21:30:00.000Z",
-    endsAt: "2026-08-19T01:30:00.000Z",
-    location: "Whitehouse High School Gym",
+    title: seed.title,
+    slug: seed.slug,
+    opponent: seed.opponent,
+    eventType: seed.eventType,
+    eventDate: seed.date,
+    startsAt: centralIso(seed.date, seed.start),
+    endsAt: centralIso(seed.date, seed.end),
+    location: "Whitehouse High School",
     address: "901 E Main St, Whitehouse, TX 75791",
-    description: "Help WHS volleyball host a smooth home-game night for players, families, and visiting fans.",
+    description: seed.description,
     homeAway: "home",
     isPublished: true,
-    signupOpensAt: "2026-07-01T05:00:00.000Z",
-    signupClosesAt: "2026-08-18T18:00:00.000Z",
     contactName: "WHS Volleyball Booster Club",
     contactEmail: organization.contactEmail,
     isArchived: false,
     schedule: [
-      { id: "44444444-4444-4444-8444-444444444441", label: "9th Grade", startsAt: "2026-08-18T21:30:00.000Z", sortOrder: 1 },
-      { id: "44444444-4444-4444-8444-444444444442", label: "JV", startsAt: "2026-08-18T22:30:00.000Z", sortOrder: 2 },
-      { id: "44444444-4444-4444-8444-444444444443", label: "Varsity", startsAt: "2026-08-18T23:30:00.000Z", sortOrder: 3 },
+      { id: scheduleId(index, 1), label: "9th Grade", startsAt: centralIso(seed.date, seed.ninth), sortOrder: 1 },
+      { id: scheduleId(index, 2), label: "JV", startsAt: centralIso(seed.date, seed.jv), sortOrder: 2 },
+      { id: scheduleId(index, 3), label: "Varsity", startsAt: centralIso(seed.date, seed.varsity), sortOrder: 3 },
     ],
     slots: [
-      { id: "55555555-5555-4555-8555-555555555551", eventId: "33333333-3333-4333-8333-333333333331", name: "Concession Stand - Early Shift", category: "Concessions", shiftStart: "2026-08-18T21:00:00.000Z", shiftEnd: "2026-08-18T23:00:00.000Z", capacity: 3, filled: 1, isOpen: true, isVisible: true, sortOrder: 1 },
-      { id: "55555555-5555-4555-8555-555555555552", eventId: "33333333-3333-4333-8333-333333333331", name: "Concession Stand - Late Shift", category: "Concessions", shiftStart: "2026-08-18T23:00:00.000Z", shiftEnd: "2026-08-19T01:30:00.000Z", capacity: 3, filled: 0, isOpen: true, isVisible: true, sortOrder: 2 },
-      { id: "55555555-5555-4555-8555-555555555553", eventId: "33333333-3333-4333-8333-333333333331", name: "Ticket Table", category: "Admissions", capacity: 2, filled: 2, isOpen: true, isVisible: true, sortOrder: 3 },
-      { id: "55555555-5555-4555-8555-555555555554", eventId: "33333333-3333-4333-8333-333333333331", name: "Scorebook", category: "Game Support", capacity: 1, filled: 0, isOpen: true, isVisible: true, sortOrder: 4 },
+      { id: slotId(index, 1), eventId, name: "Student Volunteer", category: "Student Volunteers", shiftStart: centralIso(seed.date, seed.start), shiftEnd: centralIso(seed.date, seed.end), capacity: 6, filled: 0, isOpen: true, isVisible: true, sortOrder: 1 },
+      { id: slotId(index, 2), eventId, name: "Adult Volunteer", category: "Adult Volunteers", shiftStart: centralIso(seed.date, seed.start), shiftEnd: centralIso(seed.date, seed.end), capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 2 },
     ],
-  },
-  {
-    id: "33333333-3333-4333-8333-333333333332",
-    organizationId: organization.id,
-    sport: "Volleyball",
-    season: "2026",
-    title: "Whitehouse vs Hallsville",
-    slug: "whitehouse-vs-hallsville-2026-09-01",
-    opponent: "Hallsville",
-    eventType: "Home Game",
-    eventDate: "2026-09-01",
-    startsAt: "2026-09-01T21:30:00.000Z",
-    location: "Whitehouse High School Gym",
-    address: "901 E Main St, Whitehouse, TX 75791",
-    description: "District match volunteer coverage.",
-    homeAway: "home",
-    isPublished: true,
-    isArchived: false,
-    schedule: [
-      { id: "44444444-4444-4444-8444-444444444451", label: "9th Grade", startsAt: "2026-09-01T21:30:00.000Z", sortOrder: 1 },
-      { id: "44444444-4444-4444-8444-444444444452", label: "JV", startsAt: "2026-09-01T22:30:00.000Z", sortOrder: 2 },
-      { id: "44444444-4444-4444-8444-444444444453", label: "Varsity", startsAt: "2026-09-01T23:30:00.000Z", sortOrder: 3 },
-    ],
-    slots: [
-      { id: "55555555-5555-4555-8555-555555555561", eventId: "33333333-3333-4333-8333-333333333332", name: "Admissions", category: "Admissions", capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 1 },
-      { id: "55555555-5555-4555-8555-555555555562", eventId: "33333333-3333-4333-8333-333333333332", name: "Cleanup Crew", category: "Facilities", capacity: 3, filled: 1, isOpen: true, isVisible: true, sortOrder: 2 },
-    ],
-  },
-  {
-    id: "33333333-3333-4333-8333-333333333333",
-    organizationId: organization.id,
-    sport: "Volleyball",
-    season: "2026",
-    title: "WHS Fall Volleyball Tournament",
-    slug: "whs-fall-volleyball-tournament-2026-09-12",
-    eventType: "Tournament",
-    eventDate: "2026-09-12",
-    startsAt: "2026-09-12T13:00:00.000Z",
-    endsAt: "2026-09-13T01:00:00.000Z",
-    location: "Whitehouse High School Gym",
-    homeAway: "home",
-    isPublished: true,
-    isArchived: false,
-    schedule: [{ id: "44444444-4444-4444-8444-444444444461", label: "Tournament play", startsAt: "2026-09-12T13:00:00.000Z", sortOrder: 1 }],
-    slots: [
-      { id: "55555555-5555-4555-8555-555555555571", eventId: "33333333-3333-4333-8333-333333333333", name: "Morning Concessions", category: "Concessions", capacity: 4, filled: 4, isOpen: true, isVisible: true, sortOrder: 1 },
-      { id: "55555555-5555-4555-8555-555555555572", eventId: "33333333-3333-4333-8333-333333333333", name: "Hospitality Room", category: "Hospitality", capacity: 3, filled: 2, isOpen: true, isVisible: true, sortOrder: 2 },
-    ],
-  },
-];
+  };
+});
 
-export const sampleSignups: Signup[] = [
-  {
-    id: "66666666-6666-4666-8666-666666666661",
-    organizationId: organization.id,
-    eventId: events[0].id,
-    slotId: events[0].slots[0].id,
-    firstName: "Sample",
-    lastName: "Volunteer",
-    email: "sample@example.com",
-    normalizedEmail: "sample@example.com",
-    phone: "555-0100",
-    status: "confirmed",
-    cancellationTokenHash: "demo",
-    createdAt: "2026-07-15T15:00:00.000Z",
-  },
-];
+export const sampleSignups: Signup[] = [];
+
+function centralIso(date: string, time: string) {
+  return new Date(`${date}T${time}:00-05:00`).toISOString();
+}
+
+function scheduleId(eventIndex: number, order: number) {
+  return `44444444-4444-4444-8444-${(444444444400 + eventIndex * 10 + order).toString()}`;
+}
+
+function slotId(eventIndex: number, order: number) {
+  return `55555555-5555-4555-8555-${(555555555500 + eventIndex * 10 + order).toString()}`;
+}
