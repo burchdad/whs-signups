@@ -243,10 +243,10 @@ export async function createBoosterClubSignup(input: BoosterClubSignupInput): Pr
       )
       insert into booster_club_signups (
         organization_id, first_name, last_name, email, normalized_email, phone,
-        gear_preference, open_to_volunteering, interested_in_sponsoring
+        selected_sports, gear_preference, open_to_volunteering, interested_in_sponsoring
       )
       select
-        org.id, $1, $2, $3, $4, $5, $6, $7, $8
+        org.id, $1, $2, $3, $4, $5, $6, $7, $8, $9
       from org
       returning id
       `,
@@ -256,6 +256,7 @@ export async function createBoosterClubSignup(input: BoosterClubSignupInput): Pr
         input.email.trim(),
         normalizeEmail(input.email),
         input.phone.trim(),
+        input.selectedSports,
         input.gearPreference,
         input.openToVolunteering === "yes",
         input.interestedInSponsoring === "yes",

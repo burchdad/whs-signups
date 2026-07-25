@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sportsOffered } from "./sports";
 
 export const signupSchema = z.object({
   slotId: z.string().uuid("Choose a valid volunteer position."),
@@ -19,6 +20,7 @@ export const boosterClubSignupSchema = z.object({
   lastName: z.string().trim().min(1, "Last name is required.").max(80),
   email: z.string().trim().email("Enter a valid email address.").max(200),
   phone: z.string().trim().min(7, "Enter a phone number.").max(40),
+  selectedSports: z.array(z.enum(sportsOffered)).min(1, "Choose at least one sport."),
   gearPreference: z.enum(["hat", "shirt"], { error: "Choose hat or shirt." }),
   openToVolunteering: z.enum(["yes", "no"], { error: "Choose whether you are open to volunteering." }),
   interestedInSponsoring: z.enum(["yes", "no"], { error: "Choose whether you are interested in sponsoring." }),

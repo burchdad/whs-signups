@@ -11,16 +11,19 @@ export default async function AdminEventsPage() {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold text-[var(--maroon-dark)]">Events</h1>
-        <Link href="/admin/events/new" className="min-h-11 rounded-md bg-[var(--maroon)] px-4 py-2 font-semibold text-white">Create event</Link>
+        <div>
+          <p className="eyebrow">Admin roster</p>
+          <h1 className="text-3xl font-black uppercase text-[var(--ink)]">Events</h1>
+        </div>
+        <Link href="/admin/events/new" className="min-h-11 rounded-sm bg-[var(--maroon)] px-4 py-2 font-black uppercase tracking-wide text-white hover:bg-[var(--maroon-dark)]">Create event</Link>
       </div>
-      <div className="mt-5 rounded-lg border border-[var(--border)] bg-white p-4">
+      <div className="wildcat-card mt-5 rounded-sm p-4">
         <input placeholder="Search by event, opponent, or location" className="field" />
       </div>
-      <div className="mt-5 overflow-x-auto rounded-lg border border-[var(--border)] bg-white">
+      <div className="wildcat-card mt-5 overflow-x-auto rounded-sm">
         <table className="w-full min-w-[760px] text-left text-sm">
-          <thead><tr className="border-b border-[var(--border)]"><th className="p-3">Date</th><th>Event</th><th>Location</th><th>Open</th><th>Status</th><th></th></tr></thead>
-          <tbody>{events.map((event) => <tr key={event.id} className="border-b border-[var(--border)]"><td className="p-3">{formatDate(event.startsAt)}</td><td>{event.title}</td><td>{event.location}</td><td>{eventOpenPositions(event)}</td><td>{event.isPublished ? "Published" : "Draft"}</td><td><Link className="font-semibold text-[var(--maroon)]" href={`/admin/events/${event.id}`}>Manage</Link></td></tr>)}</tbody>
+          <thead><tr className="border-b border-[var(--border)] text-xs font-black uppercase tracking-wide text-[var(--maroon-dark)]"><th className="p-3">Date</th><th>Event</th><th>Location</th><th>Open</th><th>Status</th><th></th></tr></thead>
+          <tbody>{events.map((event) => <tr key={event.id} className="border-b border-[var(--border)] font-medium"><td className="p-3">{formatDate(event.startsAt)}</td><td className="font-black text-[var(--ink)]">{event.title}</td><td>{event.location}</td><td>{eventOpenPositions(event)}</td><td>{event.isPublished ? "Published" : "Draft"}</td><td><Link className="font-black uppercase tracking-wide text-[var(--maroon)]" href={`/admin/events/${event.id}`}>Manage</Link></td></tr>)}</tbody>
         </table>
       </div>
     </>

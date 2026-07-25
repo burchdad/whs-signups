@@ -12,3 +12,4 @@ on conflict do nothing;
 
 \ir ../migrations/002_replace_2026_home_games.sql
 \ir ../migrations/003_booster_club_signups.sql
+\ir ../migrations/004_booster_club_selected_sports.sql

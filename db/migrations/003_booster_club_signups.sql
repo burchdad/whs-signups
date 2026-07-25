@@ -6,6 +6,7 @@ create table if not exists booster_club_signups (
   email text not null,
   normalized_email text not null,
   phone text not null,
+  selected_sports text[] not null default '{}',
   gear_preference text not null check (gear_preference in ('hat', 'shirt')),
   open_to_volunteering boolean not null,
   interested_in_sponsoring boolean not null,
@@ -17,3 +18,4 @@ create table if not exists booster_club_signups (
 
 create index if not exists booster_club_signups_org_email_idx on booster_club_signups (organization_id, normalized_email);
 create index if not exists booster_club_signups_created_at_idx on booster_club_signups (created_at desc);
+create index if not exists booster_club_signups_selected_sports_idx on booster_club_signups using gin (selected_sports);

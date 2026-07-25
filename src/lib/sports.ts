@@ -15,4 +15,4 @@ export const sportsOffered = [
   "Track and Field (Girls)",
   "Volleyball",
   "Volleyball (Girls)",
-];
+] as const;

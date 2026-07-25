@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Script from "next/script";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { sportsOffered } from "@/lib/sports";
 import { boosterClubSignupSchema, type BoosterClubSignupInput } from "@/lib/validation";
 
 declare global {
@@ -25,6 +26,7 @@ export function BoosterClubForm({ turnstileSiteKey }: { turnstileSiteKey?: strin
     resolver: zodResolver(boosterClubSignupSchema),
     defaultValues: {
       gearPreference: "shirt",
+      selectedSports: ["Volleyball"],
       openToVolunteering: "yes",
       interestedInSponsoring: "no",
       consent: undefined,
@@ -46,6 +48,7 @@ export function BoosterClubForm({ turnstileSiteKey }: { turnstileSiteKey?: strin
     }
     reset({
       gearPreference: "shirt",
+      selectedSports: ["Volleyball"],
       openToVolunteering: "yes",
       interestedInSponsoring: "no",
       consent: undefined,
@@ -74,6 +77,25 @@ export function BoosterClubForm({ turnstileSiteKey }: { turnstileSiteKey?: strin
         <Field label="Email" error={errors.email?.message}><input {...register("email")} type="email" autoComplete="email" className="field" /></Field>
         <Field label="Phone" error={errors.phone?.message}><input {...register("phone")} autoComplete="tel" className="field" /></Field>
       </div>
+      <fieldset className="grid gap-1.5">
+        <legend className="font-black uppercase tracking-wide text-[var(--ink)]">Sports you want to be part of</legend>
+        <details className="group rounded-sm border border-[var(--border)] bg-white">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-3 font-semibold text-[var(--muted)] [&::-webkit-details-marker]:hidden">
+            Select one or more sports
+            <span className="text-xs font-black uppercase tracking-wide text-[var(--maroon)] group-open:hidden">Open</span>
+            <span className="hidden text-xs font-black uppercase tracking-wide text-[var(--maroon)] group-open:inline">Close</span>
+          </summary>
+          <div className="grid max-h-72 gap-2 overflow-y-auto border-t border-[var(--border)] p-3 sm:grid-cols-2">
+            {sportsOffered.map((sport) => (
+              <label key={sport} className="flex min-h-10 items-center gap-2 rounded-sm border border-[var(--border)] px-3 text-sm font-semibold hover:border-[var(--maroon)]">
+                <input type="checkbox" value={sport} {...register("selectedSports")} className="h-4 w-4 rounded border-[var(--border)]" />
+                <span>{sport}</span>
+              </label>
+            ))}
+          </div>
+        </details>
+        {errors.selectedSports?.message ? <span className="text-sm font-medium text-[var(--maroon-dark)]">{errors.selectedSports.message}</span> : null}
+      </fieldset>
       <Field label="Booster item" error={errors.gearPreference?.message}>
         <select {...register("gearPreference")} className="field font-semibold">
           <option value="shirt">Shirt</option>
