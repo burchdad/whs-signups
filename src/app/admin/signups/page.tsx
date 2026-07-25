@@ -13,7 +13,7 @@ export default function AdminSignupsPage() {
         <input className="field" placeholder="Search by volunteer, email, event, date, or position" />
         <div className="mt-5 grid gap-3 text-sm text-[var(--muted)]">
           <p>Admin workflows support manual additions, moves, cancellations, removals, CSV export, and Excel export through the service layer.</p>
-          <p>Connect Supabase to show private roster data here under administrator RLS policies.</p>
+          <p>Connect Railway Postgres with `DATABASE_URL` to show private roster data here.</p>
         </div>
       </section>
     </>

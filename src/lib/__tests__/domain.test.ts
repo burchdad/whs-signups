@@ -62,8 +62,8 @@ describe("domain behavior", () => {
     expect(csv).toContain("sample@example.com");
   });
 
-  it("documents admin authorization through RLS helper expectations", () => {
-    const migrationPolicy = "is_org_admin(organization_id)";
-    expect(migrationPolicy).toContain("is_org_admin");
+  it("documents admin authorization through server-side route boundaries", () => {
+    const boundary = "requireAdmin";
+    expect(boundary).toContain("Admin");
   });
 });

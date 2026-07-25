@@ -9,7 +9,7 @@ export default function AdminLoginPage() {
       <main className="container py-10">
         <form className="mx-auto grid max-w-md gap-4 rounded-lg border border-[var(--border)] bg-white p-6">
           <h1 className="text-2xl font-bold text-[var(--maroon-dark)]">Admin login</h1>
-          <p className="text-sm text-[var(--muted)]">Connect Supabase Auth to enable secure administrator sessions. Local development shows this form without submitting credentials.</p>
+          <p className="text-sm text-[var(--muted)]">Admin auth is ready for the next pass. This MVP uses server-side admin route boundaries and Railway Postgres for data.</p>
           <label className="grid gap-1.5"><span>Email</span><input type="email" className="field" /></label>
           <label className="grid gap-1.5"><span>Password</span><input type="password" className="field" /></label>
           <button type="button" className="min-h-12 rounded-md bg-[var(--maroon)] px-5 font-semibold text-white">Sign in</button>

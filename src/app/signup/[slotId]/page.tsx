@@ -27,7 +27,7 @@ export default async function SignupPage({ params }: { params: Promise<{ slotId:
           </dl>
         </aside>
         <section>
-          <SignupForm slotId={slot.id} />
+          <SignupForm slotId={slot.id} turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} />
         </section>
       </main>
     </>

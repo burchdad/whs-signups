@@ -1,17 +1,25 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Script from "next/script";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { signupSchema, type SignupInput } from "@/lib/validation";
 
-export function SignupForm({ slotId }: { slotId: string }) {
+declare global {
+  interface Window {
+    onTurnstileSuccess?: (token: string) => void;
+  }
+}
+
+export function SignupForm({ slotId, turnstileSiteKey }: { slotId: string; turnstileSiteKey?: string }) {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
@@ -33,9 +41,18 @@ export function SignupForm({ slotId }: { slotId: string }) {
     router.push(`/signup/confirmation?event=${payload.eventSlug}&slot=${payload.slotId}`);
   }
 
+  useEffect(() => {
+    window.onTurnstileSuccess = (token: string) => setValue("turnstileToken", token);
+    return () => {
+      delete window.onTurnstileSuccess;
+    };
+  }, [setValue]);
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 rounded-lg border border-[var(--border)] bg-white p-5">
       <input type="hidden" {...register("slotId")} />
+      <input type="hidden" {...register("turnstileToken")} />
+      {turnstileSiteKey ? <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer /> : null}
       {formError ? <p role="alert" className="rounded-md bg-[#fff2f0] p-3 text-sm font-medium text-[var(--maroon-dark)]">{formError}</p> : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="First name" error={errors.firstName?.message}><input {...register("firstName")} autoComplete="given-name" className="field" /></Field>
@@ -52,6 +69,7 @@ export function SignupForm({ slotId }: { slotId: string }) {
         <span>I understand WHSSignups will use my contact information for this volunteer commitment.</span>
       </label>
       {errors.consent?.message ? <p className="text-sm font-medium text-[var(--maroon-dark)]">{errors.consent.message}</p> : null}
+      {turnstileSiteKey ? <div className="cf-turnstile" data-sitekey={turnstileSiteKey} data-callback="onTurnstileSuccess" /> : null}
       <button disabled={isSubmitting} className="min-h-12 rounded-md bg-[var(--maroon)] px-5 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60">
         {isSubmitting ? "Submitting..." : "Confirm signup"}
       </button>

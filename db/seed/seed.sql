@@ -39,3 +39,21 @@ values
 ('33333333-3333-4333-8333-333333333331','11111111-1111-4111-8111-111111111111','21111111-1111-4111-8111-111111111111','31111111-1111-4111-8111-111111111111','Whitehouse vs Tyler Legacy','whitehouse-vs-tyler-legacy-2026-08-18','Tyler Legacy','Home Game','2026-08-18','2026-08-18 16:30:00-05','2026-08-18 20:30:00-05','Whitehouse High School Gym','901 E Main St, Whitehouse, TX 75791','Help WHS volleyball host a smooth home-game night.',true),
 ('33333333-3333-4333-8333-333333333332','11111111-1111-4111-8111-111111111111','21111111-1111-4111-8111-111111111111','31111111-1111-4111-8111-111111111111','Whitehouse vs Hallsville','whitehouse-vs-hallsville-2026-09-01','Hallsville','Home Game','2026-09-01','2026-09-01 16:30:00-05',null,'Whitehouse High School Gym','901 E Main St, Whitehouse, TX 75791','District match volunteer coverage.',true)
 on conflict do nothing;
+
+insert into event_schedule_items (event_id, label, starts_at, sort_order)
+values
+('33333333-3333-4333-8333-333333333331','9th Grade','2026-08-18 16:30:00-05',1),
+('33333333-3333-4333-8333-333333333331','JV','2026-08-18 17:30:00-05',2),
+('33333333-3333-4333-8333-333333333331','Varsity','2026-08-18 18:30:00-05',3),
+('33333333-3333-4333-8333-333333333332','9th Grade','2026-09-01 16:30:00-05',1),
+('33333333-3333-4333-8333-333333333332','JV','2026-09-01 17:30:00-05',2),
+('33333333-3333-4333-8333-333333333332','Varsity','2026-09-01 18:30:00-05',3);
+
+insert into volunteer_slots (event_id, name, category, shift_start_at, shift_end_at, capacity, sort_order)
+values
+('33333333-3333-4333-8333-333333333331','Concession Stand - Early Shift','Concessions','2026-08-18 16:00:00-05','2026-08-18 18:00:00-05',3,1),
+('33333333-3333-4333-8333-333333333331','Concession Stand - Late Shift','Concessions','2026-08-18 18:00:00-05','2026-08-18 20:30:00-05',3,2),
+('33333333-3333-4333-8333-333333333331','Ticket Table','Admissions',null,null,2,3),
+('33333333-3333-4333-8333-333333333331','Scorebook','Game Support',null,null,1,4),
+('33333333-3333-4333-8333-333333333332','Admissions','Admissions',null,null,2,1),
+('33333333-3333-4333-8333-333333333332','Cleanup Crew','Facilities',null,null,3,2);

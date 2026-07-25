@@ -17,7 +17,7 @@ export default async function AdminEventDetailPage({ params }: { params: Promise
             <h2 className="text-xl font-semibold">{section}</h2>
             {section === "Team/game times" ? <ul className="mt-3 grid gap-2 text-sm text-[var(--muted)]">{event.schedule.map((item) => <li key={item.id}>{item.label}: {formatDateTime(item.startsAt)}</li>)}</ul> : null}
             {section === "Volunteer slots" ? <ul className="mt-3 grid gap-2 text-sm text-[var(--muted)]">{event.slots.map((slot) => <li key={slot.id}>{slot.name}: {slot.filled}/{slot.capacity}</li>)}</ul> : null}
-            {!["Team/game times", "Volunteer slots"].includes(section) ? <p className="mt-3 text-sm text-[var(--muted)]">Ready for Supabase-backed management actions, confirmations, and audit entries.</p> : null}
+            {!["Team/game times", "Volunteer slots"].includes(section) ? <p className="mt-3 text-sm text-[var(--muted)]">Ready for Railway Postgres-backed management actions, confirmations, and audit entries.</p> : null}
           </section>
         ))}
       </div>
