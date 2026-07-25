@@ -20,21 +20,22 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
     <>
       <BrandHeader />
       <main className="container py-8">
-        <h1 className="text-3xl font-bold text-[var(--maroon-dark)]">Volunteer events</h1>
-        <form className="mt-5 grid gap-3 rounded-lg border border-[var(--border)] bg-white p-4 sm:grid-cols-4">
-          <select name="sport" defaultValue={params.sport ?? ""} className="min-h-11 rounded-md border border-[var(--border)] px-3">
+        <p className="eyebrow text-[var(--maroon)]">Whitehouse volleyball</p>
+        <h1 className="mt-1 text-4xl font-black uppercase text-[var(--ink)]">Volunteer schedule</h1>
+        <form className="wildcat-card mt-5 grid gap-3 rounded-sm p-4 sm:grid-cols-4">
+          <select name="sport" defaultValue={params.sport ?? ""} className="min-h-11 rounded-sm border border-[var(--border)] px-3 font-semibold">
             <option value="">All sports</option><option>Volleyball</option>
           </select>
-          <select name="type" defaultValue={params.type ?? ""} className="min-h-11 rounded-md border border-[var(--border)] px-3">
+          <select name="type" defaultValue={params.type ?? ""} className="min-h-11 rounded-sm border border-[var(--border)] px-3 font-semibold">
             <option value="">All event types</option><option>Home Game</option><option>Tournament</option>
           </select>
-          <select name="when" defaultValue={params.when ?? "upcoming"} className="min-h-11 rounded-md border border-[var(--border)] px-3">
+          <select name="when" defaultValue={params.when ?? "upcoming"} className="min-h-11 rounded-sm border border-[var(--border)] px-3 font-semibold">
             <option value="upcoming">Upcoming</option><option value="past">Past</option>
           </select>
-          <select name="availability" defaultValue={params.availability ?? ""} className="min-h-11 rounded-md border border-[var(--border)] px-3">
+          <select name="availability" defaultValue={params.availability ?? ""} className="min-h-11 rounded-sm border border-[var(--border)] px-3 font-semibold">
             <option value="">Open and full</option><option value="open">Open only</option><option value="full">Full only</option>
           </select>
-          <button className="min-h-11 rounded-md bg-[var(--maroon)] px-4 font-semibold text-white sm:col-span-4">Apply filters</button>
+          <button className="min-h-11 rounded-sm bg-[var(--maroon)] px-4 font-black uppercase tracking-wide text-white sm:col-span-4">Apply filters</button>
         </form>
         <div className="mt-6 grid gap-4 md:grid-cols-2">{filtered.map((event) => <EventCard key={event.id} event={event} />)}</div>
       </main>

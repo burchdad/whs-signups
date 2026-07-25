@@ -16,14 +16,14 @@ export default async function SignupPage({ params }: { params: Promise<{ slotId:
     <>
       <BrandHeader />
       <main className="container grid gap-6 py-8 lg:grid-cols-[0.8fr_1.2fr]">
-        <aside className="rounded-lg border border-[var(--border)] bg-white p-5">
-          <p className="text-sm font-semibold uppercase tracking-wide text-[var(--maroon)]">Volunteer signup</p>
-          <h1 className="mt-2 text-2xl font-bold text-[var(--maroon-dark)]">{slot.name}</h1>
+        <aside className="athletic-band rounded-sm p-5 text-white">
+          <p className="eyebrow">Volunteer signup</p>
+          <h1 className="mt-2 text-3xl font-black uppercase text-white">{slot.name}</h1>
           <dl className="mt-5 grid gap-3 text-sm">
-            <div><dt className="font-semibold">Event</dt><dd>{event.title}</dd></div>
-            <div><dt className="font-semibold">Date</dt><dd>{formatDateTime(event.startsAt)}</dd></div>
-            <div><dt className="font-semibold">Location</dt><dd>{event.location}</dd></div>
-            <div><dt className="font-semibold">Availability</dt><dd>{remainingCount(slot)} of {slot.capacity} spots remaining</dd></div>
+            <div><dt className="font-black uppercase text-[var(--gold)]">Event</dt><dd className="font-medium text-white/86">{event.title}</dd></div>
+            <div><dt className="font-black uppercase text-[var(--gold)]">Date</dt><dd className="font-medium text-white/86">{formatDateTime(event.startsAt)}</dd></div>
+            <div><dt className="font-black uppercase text-[var(--gold)]">Location</dt><dd className="font-medium text-white/86">{event.location}</dd></div>
+            <div><dt className="font-black uppercase text-[var(--gold)]">Availability</dt><dd className="font-medium text-white/86">{remainingCount(slot)} of {slot.capacity} spots remaining</dd></div>
           </dl>
         </aside>
         <section>
