@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sendBoosterClubEmails } from "@/lib/email/service";
 import { createBoosterClubSignup } from "@/lib/repository";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { boosterClubSignupSchema } from "@/lib/validation";
@@ -10,5 +11,6 @@ export async function POST(request: Request) {
   if (!challenge.ok) return NextResponse.json({ message: challenge.message }, { status: 400 });
   const result = await createBoosterClubSignup(parsed.data);
   if (!result.ok) return NextResponse.json({ message: result.message, code: result.code }, { status: result.code === "not_ready" ? 503 : 500 });
+  await sendBoosterClubEmails(parsed.data);
   return NextResponse.json({ ok: true, id: result.id });
 }

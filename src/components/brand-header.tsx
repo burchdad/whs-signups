@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { sportsOffered } from "@/lib/sports";
+import { sportSlug, sportsOffered } from "@/lib/sports";
 
 export function BrandHeader() {
   return (
@@ -28,7 +28,7 @@ export function BrandHeader() {
             </summary>
             <div className="absolute left-0 top-full mt-3 grid w-[min(720px,calc(100vw-32px))] grid-cols-2 gap-x-10 rounded-sm border-t-4 border-[var(--gold)] bg-white p-6 text-[var(--maroon-dark)] shadow-2xl">
               {sportsOffered.map((sport) => (
-                <Link key={sport} href={`/events?sport=${encodeURIComponent(sport)}`} className="flex min-h-11 items-center justify-between border-b border-[var(--border)] text-sm font-black uppercase hover:text-[var(--maroon)]">
+                <Link key={sport} href={`/sports/${sportSlug(sport)}`} className="flex min-h-11 items-center justify-between border-b border-[var(--border)] text-sm font-black uppercase hover:text-[var(--maroon)]">
                   <span>{sport}</span>
                   <span className="text-xs italic tracking-normal text-[var(--muted)]">Volunteer</span>
                 </Link>

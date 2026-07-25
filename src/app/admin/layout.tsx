@@ -7,6 +7,7 @@ const nav = [
   ["/admin/import", "Import"],
   ["/admin/templates", "Templates"],
   ["/admin/signups", "Signups"],
+  ["/admin/booster-club", "Booster Club"],
   ["/admin/settings", "Settings"],
 ];
 
@@ -30,7 +31,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span className="block text-xs font-black uppercase tracking-[0.18em] text-[var(--gold)]">Wildcats operations</span>
             </span>
           </Link>
-          <Link href="/admin/login" className="rounded-sm border border-[var(--gold)] px-3 py-2 text-sm font-black uppercase tracking-wide text-[var(--gold)] hover:bg-[var(--gold)] hover:text-black">Login</Link>
+          <form action="/api/admin/logout" method="post">
+            <button className="rounded-sm border border-[var(--gold)] px-3 py-2 text-sm font-black uppercase tracking-wide text-[var(--gold)] hover:bg-[var(--gold)] hover:text-black">Logout</button>
+          </form>
         </div>
         <nav className="container flex gap-2 overflow-x-auto pb-3 text-sm font-black uppercase tracking-wide">
           {nav.map(([href, label]) => <Link key={href} href={href} className="rounded-sm px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white">{label}</Link>)}

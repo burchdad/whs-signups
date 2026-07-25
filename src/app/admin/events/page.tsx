@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { eventOpenPositions } from "@/lib/availability";
+import { requireAdmin } from "@/lib/auth";
 import { listAdminEvents } from "@/lib/repository";
 import { formatDate } from "@/lib/utils";
 
@@ -7,6 +8,7 @@ export const metadata = { title: "Manage Events" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminEventsPage() {
+  await requireAdmin();
   const events = await listAdminEvents();
   return (
     <>

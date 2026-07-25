@@ -3,10 +3,13 @@ import Link from "next/link";
 import { BadgeDollarSign, HandHeart, Shirt, Trophy } from "lucide-react";
 import { BrandHeader } from "@/components/brand-header";
 import { BoosterClubForm } from "@/components/forms/booster-club-form";
+import { sportsOffered, type SportName } from "@/lib/sports";
 
 export const dynamic = "force-dynamic";
 
-export default function BoosterClubPage() {
+export default async function BoosterClubPage({ searchParams }: { searchParams: Promise<{ sport?: string }> }) {
+  const { sport } = await searchParams;
+  const defaultSports: SportName[] = sport && sportsOffered.includes(sport as SportName) ? [sport as SportName] : ["Volleyball"];
   return (
     <>
       <BrandHeader />
@@ -50,7 +53,7 @@ export default function BoosterClubPage() {
             <h2 className="mt-1 text-3xl font-black uppercase text-[var(--ink)]">Tell us where you fit.</h2>
             <p className="mt-3 font-medium text-[var(--muted)]">For now this is one Booster Club list. Later, this page can grow into multiple Booster Club options without changing the core signup flow.</p>
           </div>
-          <BoosterClubForm turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} />
+          <BoosterClubForm turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} defaultSports={defaultSports} />
         </section>
       </main>
     </>

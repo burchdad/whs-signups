@@ -16,3 +16,13 @@ export const sportsOffered = [
   "Volleyball",
   "Volleyball (Girls)",
 ] as const;
+
+export type SportName = (typeof sportsOffered)[number];
+
+export function sportSlug(sport: string) {
+  return sport.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+export function sportFromSlug(slug: string) {
+  return sportsOffered.find((sport) => sportSlug(sport) === slug);
+}

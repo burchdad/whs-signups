@@ -2,8 +2,8 @@ import { eventOpenPositions, eventStatus, isEventSignupOpen, isSlotAvailable } f
 import { getPool, hasDatabaseUrl, withTransaction } from "./db";
 import { events, organization, sampleSignups, templates } from "./demo-data";
 import { createToken, hashToken, verifyToken } from "./tokens";
-import type { Signup, VolunteerEvent, VolunteerTemplate } from "./types";
-import { normalizeEmail } from "./utils";
+import type { AdminSignupRow, BoosterClubSignup, Signup, VolunteerEvent, VolunteerTemplate } from "./types";
+import { normalizeEmail, slugify } from "./utils";
 import type { BoosterClubSignupInput, SignupInput } from "./validation";
 
 export async function listPublicEvents() {
@@ -81,14 +81,42 @@ export async function listAdminEvents() {
 export async function getAdminMetrics() {
   const allEvents = await listAdminEvents();
   const upcoming = allEvents.filter((event) => new Date(event.startsAt) > new Date());
-  return {
+  const baseMetrics = {
     upcomingEvents: upcoming.length,
     openPositions: allEvents.reduce((sum, event) => sum + eventOpenPositions(event), 0),
     filledPositions: allEvents.reduce((sum, event) => sum + event.slots.reduce((slotSum, slot) => slotSum + slot.filled, 0), 0),
     totalSignups: sampleSignups.length,
     attention: allEvents.filter((event) => eventStatus(event) !== "open").length,
     recentSignups: sampleSignups.slice(0, 5),
+    boosterSignups: 0,
+    boosterVolunteerProspects: 0,
+    boosterSponsorProspects: 0,
+    topBoosterSports: [] as Array<{ sport: string; count: number }>,
   };
+  if (hasDatabaseUrl()) {
+    try {
+      const [eventSignupTotal, total, volunteer, sponsor, sports, recent] = await Promise.all([
+        getPool().query("select count(*)::int as count from signups"),
+        getPool().query("select count(*)::int as count from booster_club_signups"),
+        getPool().query("select count(*)::int as count from booster_club_signups where open_to_volunteering"),
+        getPool().query("select count(*)::int as count from booster_club_signups where interested_in_sponsoring"),
+        getPool().query("select sport, count(*)::int as count from booster_club_signups, unnest(selected_sports) sport group by sport order by count desc, sport asc limit 5"),
+        listAdminSignups(5),
+      ]);
+      return {
+        ...baseMetrics,
+        totalSignups: eventSignupTotal.rows[0]?.count ?? recent.length,
+        recentSignups: recent,
+        boosterSignups: total.rows[0]?.count ?? 0,
+        boosterVolunteerProspects: volunteer.rows[0]?.count ?? 0,
+        boosterSponsorProspects: sponsor.rows[0]?.count ?? 0,
+        topBoosterSports: sports.rows.map((row) => ({ sport: String(row.sport), count: Number(row.count) })),
+      };
+    } catch (error) {
+      if (!isMissingDatabaseSchema(error)) throw error;
+    }
+  }
+  return baseMetrics;
 }
 
 export async function getTemplates(): Promise<VolunteerTemplate[]> {
@@ -165,18 +193,16 @@ export async function createSignup(input: SignupInput): Promise<SignupResult> {
         }
         if (!row.is_open) return { ok: false, code: "slot_closed", message: "That volunteer position is closed." } as SignupResult;
         const active = await client.query("select count(*)::int as count from signups where slot_id = $1 and status = 'confirmed'", [input.slotId]);
-        if (active.rows[0].count >= row.capacity) {
-          return { ok: false, code: "slot_full", message: "That volunteer position is already full." } as SignupResult;
-        }
+        const status = active.rows[0].count >= row.capacity ? "waitlisted" : "confirmed";
         const cancellationToken = createToken();
         const confirmationToken = createToken();
         const inserted = await client.query(
           `
           insert into signups (
             organization_id, event_id, slot_id, first_name, last_name, email, normalized_email, phone,
-            student_name, notes, confirmation_token_hash, cancellation_token_hash
+            student_name, notes, status, confirmation_token_hash, cancellation_token_hash
           )
-          values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+          values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
           returning *
           `,
           [
@@ -190,6 +216,7 @@ export async function createSignup(input: SignupInput): Promise<SignupResult> {
             input.phone.trim(),
             input.studentName || null,
             input.notes || null,
+            status,
             hashToken(confirmationToken),
             hashToken(cancellationToken),
           ],
@@ -205,7 +232,7 @@ export async function createSignup(input: SignupInput): Promise<SignupResult> {
   const found = await getEventAndSlot(input.slotId);
   if (!found) return { ok: false, code: "not_found", message: "That volunteer position could not be found." };
   if (!isEventSignupOpen(found.event)) return { ok: false, code: "event_closed", message: "This event is not currently accepting signups." };
-  if (!isSlotAvailable(found.slot)) return { ok: false, code: "slot_full", message: "That volunteer position is already full." };
+  const status = isSlotAvailable(found.slot) ? "confirmed" : "waitlisted";
   const cancellationToken = createToken();
   return {
     ok: true,
@@ -222,11 +249,113 @@ export async function createSignup(input: SignupInput): Promise<SignupResult> {
       phone: input.phone,
       studentName: input.studentName || undefined,
       notes: input.notes || undefined,
-      status: "confirmed",
+      status,
       cancellationTokenHash: hashToken(cancellationToken),
       createdAt: new Date().toISOString(),
     },
   };
+}
+
+export async function listAdminSignups(limit = 200): Promise<AdminSignupRow[]> {
+  if (!hasDatabaseUrl()) {
+    return sampleSignups.slice(0, limit).map((signup) => {
+      const event = events.find((candidate) => candidate.id === signup.eventId);
+      const slot = event?.slots.find((candidate) => candidate.id === signup.slotId);
+      return { ...signup, eventTitle: event?.title ?? "", eventDate: event?.eventDate ?? "", slotName: slot?.name ?? "" };
+    });
+  }
+  try {
+    const { rows } = await getPool().query(
+      `
+      select s.*, e.title as event_title, e.event_date, vs.name as slot_name
+      from signups s
+      join events e on e.id = s.event_id
+      join volunteer_slots vs on vs.id = s.slot_id
+      order by s.created_at desc
+      limit $1
+      `,
+      [limit],
+    );
+    return rows.map((row) => ({ ...rowToSignup(row), eventTitle: String(row.event_title), eventDate: toDateOnly(row.event_date), slotName: String(row.slot_name) }));
+  } catch (error) {
+    if (isMissingDatabaseSchema(error)) return [];
+    throw error;
+  }
+}
+
+export async function listBoosterClubSignups(limit = 500): Promise<BoosterClubSignup[]> {
+  if (!hasDatabaseUrl()) return [];
+  try {
+    const { rows } = await getPool().query("select * from booster_club_signups order by created_at desc limit $1", [limit]);
+    return rows.map(rowToBoosterClubSignup);
+  } catch (error) {
+    if (isMissingDatabaseSchema(error)) return [];
+    throw error;
+  }
+}
+
+export async function updateEventDetails(input: { id: string; title: string; opponent?: string; eventDate: string; startsAt: string; location: string; description?: string }) {
+  if (!hasDatabaseUrl()) return;
+  await getPool().query(
+    `
+    update events
+    set title = $2, opponent = nullif($3, ''), event_date = $4::date, starts_at = $5::timestamptz,
+        location = $6, description = nullif($7, ''), updated_at = now()
+    where id = $1
+    `,
+    [input.id, input.title.trim(), input.opponent?.trim() ?? "", input.eventDate, input.startsAt, input.location.trim(), input.description?.trim() ?? ""],
+  );
+}
+
+export async function updateSlotState(input: { slotId: string; isOpen: boolean }) {
+  if (!hasDatabaseUrl()) return;
+  await getPool().query("update volunteer_slots set is_open = $2, updated_at = now() where id = $1", [input.slotId, input.isOpen]);
+}
+
+export async function cancelSignupById(id: string) {
+  if (!hasDatabaseUrl()) return;
+  await getPool().query("update signups set status = 'cancelled', cancelled_at = now(), updated_at = now() where id = $1 and status in ('confirmed', 'waitlisted')", [id]);
+}
+
+export async function createAdminEvent(input: { title: string; sport: string; opponent?: string; eventDate: string; startsAt: string; location: string; description?: string }) {
+  if (!hasDatabaseUrl()) return;
+  await withTransaction(async (client) => {
+    const orgId = "11111111-1111-4111-8111-111111111111";
+    const sport = await client.query(
+      "insert into sports (organization_id, name) values ($1, $2) on conflict (organization_id, name) do update set name = excluded.name returning id",
+      [orgId, input.sport],
+    );
+    const season = await client.query(
+      "insert into seasons (organization_id, sport_id, name) values ($1, $2, $3) on conflict (organization_id, name) do update set sport_id = excluded.sport_id returning id",
+      [orgId, sport.rows[0].id, "2026 Home Games"],
+    );
+    const event = await client.query(
+      `
+      insert into events (organization_id, sport_id, season_id, title, slug, opponent, event_date, starts_at, location, description, is_published)
+      values ($1,$2,$3,$4,$5,$6,$7::date,$8::timestamptz,$9,$10,true)
+      returning id
+      `,
+      [
+        orgId,
+        sport.rows[0].id,
+        season.rows[0].id,
+        input.title.trim(),
+        `${slugify(input.title)}-${input.eventDate}`,
+        input.opponent?.trim() || null,
+        input.eventDate,
+        input.startsAt,
+        input.location.trim(),
+        input.description?.trim() || null,
+      ],
+    );
+    await client.query(
+      `
+      insert into volunteer_slots (event_id, name, category, capacity, sort_order)
+      values ($1, 'Student Volunteer', 'Student Volunteers', 6, 1), ($1, 'Adult Volunteer', 'Adult Volunteers', 2, 2)
+      `,
+      [event.rows[0].id],
+    );
+  });
 }
 
 export async function createBoosterClubSignup(input: BoosterClubSignupInput): Promise<BoosterClubSignupResult> {
@@ -372,6 +501,22 @@ function rowToSignup(row: Record<string, unknown>): Signup {
     cancellationTokenHash: String(row.cancellation_token_hash),
     createdAt: toIso(row.created_at),
     cancelledAt: optionalIso(row.cancelled_at),
+  };
+}
+
+function rowToBoosterClubSignup(row: Record<string, unknown>): BoosterClubSignup {
+  return {
+    id: String(row.id),
+    firstName: String(row.first_name),
+    lastName: String(row.last_name),
+    email: String(row.email),
+    normalizedEmail: String(row.normalized_email),
+    phone: String(row.phone),
+    selectedSports: Array.isArray(row.selected_sports) ? row.selected_sports.map(String) : [],
+    gearPreference: row.gear_preference as BoosterClubSignup["gearPreference"],
+    openToVolunteering: Boolean(row.open_to_volunteering),
+    interestedInSponsoring: Boolean(row.interested_in_sponsoring),
+    createdAt: toIso(row.created_at),
   };
 }
 

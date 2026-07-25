@@ -53,15 +53,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                 <h3 className="text-lg font-black uppercase text-[var(--maroon-dark)]">{category}</h3>
                 <div className="mt-3 grid gap-3">
                   {slots.map((slot) => {
-                    const available = isEventSignupOpen(event) && isSlotAvailable(slot);
+                    const openForSignup = isEventSignupOpen(event) && slot.isOpen && slot.isVisible;
+                    const available = openForSignup && isSlotAvailable(slot);
                     return (
                       <div key={slot.id} className="wildcat-card grid gap-3 rounded-sm p-4 sm:grid-cols-[1fr_auto] sm:items-center">
                         <div>
                           <p className="font-black uppercase">{slot.name}</p>
-                          <p className="text-sm font-medium text-[var(--muted)]">{slot.filled} filled / {remainingCount(slot)} remaining of {slot.capacity}</p>
+                          <p className="text-sm font-medium text-[var(--muted)]">{remainingCount(slot)} of {slot.capacity} spots open{remainingCount(slot) <= 1 && remainingCount(slot) > 0 ? " / only 1 left" : ""}{remainingCount(slot) === 0 ? " / waitlist available" : ""}</p>
                         </div>
-                        {available ? (
-                          <Link href={`/signup/${slot.id}`} className="inline-flex min-h-11 items-center justify-center rounded-sm bg-[var(--maroon)] px-4 font-black uppercase tracking-wide text-white">Sign up</Link>
+                        {openForSignup ? (
+                          <Link href={`/signup/${slot.id}`} className="inline-flex min-h-11 items-center justify-center rounded-sm bg-[var(--maroon)] px-4 font-black uppercase tracking-wide text-white">{available ? "Sign up" : "Join waitlist"}</Link>
                         ) : (
                           <span className="inline-flex min-h-11 items-center justify-center rounded-sm bg-[#f1ece8] px-4 font-black uppercase tracking-wide text-[var(--muted)]">Unavailable</span>
                         )}

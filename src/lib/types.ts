@@ -75,3 +75,23 @@ export type VolunteerTemplate = {
   description: string;
   slots: Array<Pick<VolunteerSlot, "name" | "category" | "capacity" | "sortOrder">>;
 };
+
+export type AdminSignupRow = Signup & {
+  eventTitle: string;
+  eventDate: string;
+  slotName: string;
+};
+
+export type BoosterClubSignup = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  normalizedEmail: string;
+  phone: string;
+  selectedSports: string[];
+  gearPreference: "hat" | "shirt";
+  openToVolunteering: boolean;
+  interestedInSponsoring: boolean;
+  createdAt: string;
+};

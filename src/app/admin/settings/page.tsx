@@ -1,8 +1,10 @@
+import { requireAdmin } from "@/lib/auth";
 import { organization } from "@/lib/repository";
 
 export const metadata = { title: "Settings" };
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  await requireAdmin();
   return (
     <form className="wildcat-card grid max-w-3xl gap-4 rounded-sm p-5">
       <div>

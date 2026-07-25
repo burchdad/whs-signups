@@ -1,6 +1,6 @@
 import Image from "next/image";
-import Link from "next/link";
-import { LockKeyhole, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { AdminLoginForm } from "@/components/forms/admin-login-form";
 
 export const metadata = { title: "Admin Login" };
 
@@ -17,7 +17,7 @@ export default function AdminLoginPage() {
             <p className="text-sm font-black uppercase tracking-wide">Railway Postgres backed admin tools</p>
           </div>
         </div>
-        <form className="wildcat-card grid gap-4 rounded-sm p-6 text-[var(--foreground)]">
+        <div className="wildcat-card grid gap-4 rounded-sm p-6 text-[var(--foreground)]">
           <div className="flex items-center gap-4 border-b border-[var(--border)] pb-4">
             <Image src="/brand/whs-logo.png" alt="" width={76} height={62} />
             <div>
@@ -25,13 +25,9 @@ export default function AdminLoginPage() {
               <h2 className="text-2xl font-black uppercase">Admin login</h2>
             </div>
           </div>
-          <label className="grid gap-1.5"><span className="font-black uppercase tracking-wide">Email</span><input type="email" className="field" /></label>
-          <label className="grid gap-1.5"><span className="font-black uppercase tracking-wide">Password</span><input type="password" className="field" /></label>
-          <Link href="/admin" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-sm bg-[var(--maroon)] px-5 font-black uppercase tracking-wide text-white hover:bg-[var(--maroon-dark)]">
-            <LockKeyhole size={18} aria-hidden /> Enter admin
-          </Link>
-          <p className="text-sm font-medium text-[var(--muted)]">Credential verification can be connected when you are ready to enforce staff accounts.</p>
-        </form>
+          <AdminLoginForm />
+          <p className="text-sm font-medium text-[var(--muted)]">Uses the configured admin email, password, and signed session cookie.</p>
+        </div>
       </div>
     </section>
   );

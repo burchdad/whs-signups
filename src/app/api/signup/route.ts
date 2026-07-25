@@ -13,5 +13,5 @@ export async function POST(request: Request) {
   if (!result.ok) return NextResponse.json({ message: result.message, code: result.code }, { status: result.code === "not_found" ? 404 : 409 });
   const found = await getEventAndSlot(parsed.data.slotId);
   if (found) await sendSignupEmails({ signup: result.signup, event: found.event, slot: found.slot, cancellationToken: result.cancellationToken });
-  return NextResponse.json({ ok: true, eventSlug: found?.event.slug, slotId: parsed.data.slotId });
+  return NextResponse.json({ ok: true, eventSlug: found?.event.slug, slotId: parsed.data.slotId, status: result.signup.status });
 }

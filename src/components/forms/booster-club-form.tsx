@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import Script from "next/script";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { sportsOffered } from "@/lib/sports";
+import { sportsOffered, type SportName } from "@/lib/sports";
 import { boosterClubSignupSchema, type BoosterClubSignupInput } from "@/lib/validation";
 
 declare global {
@@ -13,7 +13,7 @@ declare global {
   }
 }
 
-export function BoosterClubForm({ turnstileSiteKey }: { turnstileSiteKey?: string }) {
+export function BoosterClubForm({ turnstileSiteKey, defaultSports = ["Volleyball"] }: { turnstileSiteKey?: string; defaultSports?: SportName[] }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [complete, setComplete] = useState(false);
   const {
@@ -26,7 +26,7 @@ export function BoosterClubForm({ turnstileSiteKey }: { turnstileSiteKey?: strin
     resolver: zodResolver(boosterClubSignupSchema),
     defaultValues: {
       gearPreference: "shirt",
-      selectedSports: ["Volleyball"],
+      selectedSports: defaultSports,
       openToVolunteering: "yes",
       interestedInSponsoring: "no",
       consent: undefined,
@@ -48,7 +48,7 @@ export function BoosterClubForm({ turnstileSiteKey }: { turnstileSiteKey?: strin
     }
     reset({
       gearPreference: "shirt",
-      selectedSports: ["Volleyball"],
+      selectedSports: defaultSports,
       openToVolunteering: "yes",
       interestedInSponsoring: "no",
       consent: undefined,

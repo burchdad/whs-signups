@@ -38,7 +38,7 @@ export function SignupForm({ slotId, turnstileSiteKey }: { slotId: string; turns
       setFormError(payload.message ?? "We could not complete the signup.");
       return;
     }
-    router.push(`/signup/confirmation?event=${payload.eventSlug}&slot=${payload.slotId}`);
+    router.push(`/signup/confirmation?event=${payload.eventSlug}&slot=${payload.slotId}&status=${payload.status ?? "confirmed"}`);
   }
 
   useEffect(() => {

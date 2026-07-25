@@ -1,8 +1,10 @@
 import { Upload } from "lucide-react";
+import { requireAdmin } from "@/lib/auth";
 
 export const metadata = { title: "Import Schedule" };
 
-export default function ImportPage() {
+export default async function ImportPage() {
+  await requireAdmin();
   return (
     <>
       <p className="eyebrow">Schedule tools</p>

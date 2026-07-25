@@ -1,4 +1,4 @@
-import type { Signup, VolunteerEvent } from "./types";
+import type { AdminSignupRow, BoosterClubSignup, Signup, VolunteerEvent } from "./types";
 
 function csvCell(value: unknown) {
   const text = String(value ?? "");
@@ -40,6 +40,41 @@ export function signupsToCsv(events: VolunteerEvent[], signups: Signup[]) {
       signup.status,
       signup.createdAt,
       signup.notes ?? "",
+    ]);
+  }
+  return rows.map((row) => row.map(csvCell).join(",")).join("\n");
+}
+
+export function adminSignupsToCsv(signups: AdminSignupRow[]) {
+  const rows = [["Event Date", "Event", "Volunteer Position", "Volunteer Name", "Email", "Phone", "Status", "Signup Date", "Notes"]];
+  for (const signup of signups) {
+    rows.push([
+      signup.eventDate,
+      signup.eventTitle,
+      signup.slotName,
+      `${signup.firstName} ${signup.lastName}`,
+      signup.email,
+      signup.phone,
+      signup.status,
+      signup.createdAt,
+      signup.notes ?? "",
+    ]);
+  }
+  return rows.map((row) => row.map(csvCell).join(",")).join("\n");
+}
+
+export function boosterClubToCsv(signups: BoosterClubSignup[]) {
+  const rows = [["Name", "Email", "Phone", "Sports", "Item", "Open To Volunteering", "Interested In Sponsoring", "Signup Date"]];
+  for (const signup of signups) {
+    rows.push([
+      `${signup.firstName} ${signup.lastName}`,
+      signup.email,
+      signup.phone,
+      signup.selectedSports.join("; "),
+      signup.gearPreference,
+      signup.openToVolunteering ? "Yes" : "No",
+      signup.interestedInSponsoring ? "Yes" : "No",
+      signup.createdAt,
     ]);
   }
   return rows.map((row) => row.map(csvCell).join(",")).join("\n");
