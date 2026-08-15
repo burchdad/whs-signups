@@ -11,6 +11,6 @@ export async function POST(request: Request) {
   if (!challenge.ok) return NextResponse.json({ message: challenge.message }, { status: 400 });
   const result = await createBoosterClubSignup(parsed.data);
   if (!result.ok) return NextResponse.json({ message: result.message, code: result.code }, { status: result.code === "not_ready" ? 503 : 500 });
-  await sendBoosterClubEmails(parsed.data);
+  await sendBoosterClubEmails({ ...parsed.data, signupId: result.id });
   return NextResponse.json({ ok: true, id: result.id });
 }

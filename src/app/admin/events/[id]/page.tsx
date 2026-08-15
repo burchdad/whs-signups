@@ -31,6 +31,10 @@ export default async function AdminEventDetailPage({ params }: { params: Promise
               <label className="grid gap-1.5"><span className="font-black uppercase tracking-wide">Location</span><input name="location" className="field" defaultValue={event.location} required /></label>
             </div>
             <label className="grid gap-1.5"><span className="font-black uppercase tracking-wide">Description</span><textarea name="description" rows={3} className="field" defaultValue={event.description ?? ""} /></label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="grid gap-1.5"><span className="font-black uppercase tracking-wide">Signup owner name</span><input name="contactName" className="field" defaultValue={event.contactName ?? ""} /></label>
+              <label className="grid gap-1.5"><span className="font-black uppercase tracking-wide">Signup owner email</span><input name="contactEmail" type="email" className="field" defaultValue={event.contactEmail ?? ""} /><small className="font-medium text-[var(--muted)]">Receives signups and cancellations.</small></label>
+            </div>
             <button className="min-h-11 rounded-sm bg-[var(--maroon)] px-4 font-black uppercase tracking-wide text-white">Save event</button>
           </form>
         </section>

@@ -14,13 +14,14 @@ import {
 } from "lucide-react";
 import { BrandHeader } from "@/components/brand-header";
 import { eventOpenPositions, isEventSignupOpen } from "@/lib/availability";
-import { listPublicEvents } from "@/lib/repository";
-import { sportPhotos, sportSlug, sportsOffered } from "@/lib/sports";
+import { getSportPhotoMap, listPublicEvents } from "@/lib/repository";
+import { sportSlug, sportsOffered } from "@/lib/sports";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const events = (await listPublicEvents()).filter((event) => isEventSignupOpen(event));
+  const [publicEvents, photoMap] = await Promise.all([listPublicEvents(), getSportPhotoMap()]);
+  const events = publicEvents.filter((event) => isEventSignupOpen(event));
   const upcomingEvents = events.slice(0, 3);
   const openPositions = events.reduce((total, event) => total + eventOpenPositions(event), 0);
   const activeSports = sportsOffered
@@ -124,14 +125,14 @@ export default async function Home() {
           <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {activeSports.slice(0, 8).map(({ sport, count }, index) => (
               <Link key={sport} href={`/${sportSlug(sport)}`} className={`sport-tile group relative flex min-h-52 flex-col overflow-hidden rounded-sm p-5 ${count > 0 ? "sport-tile-active" : ""}`}>
-                {sportPhotos[sport]?.[0] && <><Image src={sportPhotos[sport][0].src} alt="" fill sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw" className="-z-10 object-cover transition-transform duration-500 group-hover:scale-105" /><span className="absolute inset-0 -z-10 bg-gradient-to-t from-black/95 via-black/38 to-black/10" /></>}
+                {photoMap[sport]?.[0] && <><Image src={photoMap[sport][0].src} alt="" fill sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw" className="-z-10 object-cover transition-transform duration-500 group-hover:scale-105" /><span className="absolute inset-0 -z-10 bg-gradient-to-t from-black/95 via-black/38 to-black/10" /></>}
                 <span className="grid h-11 w-11 place-items-center rounded-full bg-[var(--maroon-dark)] text-[var(--gold)]"><Trophy size={21} aria-hidden /></span>
-                <span className={`mt-auto text-lg font-black uppercase leading-tight ${sportPhotos[sport] ? "text-white" : "text-[var(--ink)]"}`}>{sport}</span>
-                <span className={`mt-2 flex items-center justify-between text-sm font-bold ${sportPhotos[sport] ? "text-white/78" : "text-[var(--muted)]"}`}>
+                <span className={`mt-auto text-lg font-black uppercase leading-tight ${photoMap[sport] ? "text-white" : "text-[var(--ink)]"}`}>{sport}</span>
+                <span className={`mt-2 flex items-center justify-between text-sm font-bold ${photoMap[sport] ? "text-white/78" : "text-[var(--muted)]"}`}>
                   {count > 0 ? `${count} open ${count === 1 ? "event" : "events"}` : "Team page"}
-                  <ArrowRight className={`${sportPhotos[sport] ? "text-[var(--gold)]" : "text-[var(--maroon)]"} transition-transform group-hover:translate-x-1`} size={18} aria-hidden />
+                  <ArrowRight className={`${photoMap[sport] ? "text-[var(--gold)]" : "text-[var(--maroon)]"} transition-transform group-hover:translate-x-1`} size={18} aria-hidden />
                 </span>
-                {!sportPhotos[sport] && <span className="absolute -right-5 -top-6 select-none text-8xl font-black text-[var(--maroon)]/[0.04]" aria-hidden>{String(index + 1).padStart(2, "0")}</span>}
+                {!photoMap[sport] && <span className="absolute -right-5 -top-6 select-none text-8xl font-black text-[var(--maroon)]/[0.04]" aria-hidden>{String(index + 1).padStart(2, "0")}</span>}
               </Link>
             ))}
           </div>

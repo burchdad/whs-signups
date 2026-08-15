@@ -5,6 +5,9 @@ const scriptSources = process.env.NODE_ENV === "development"
   : "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: { bodySizeLimit: "6mb" },
+  },
   turbopack: {
     root: __dirname,
   },

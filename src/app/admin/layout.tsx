@@ -6,6 +6,7 @@ const nav = [
   ["/admin/events", "Events"],
   ["/admin/import", "Import"],
   ["/admin/templates", "Templates"],
+  ["/admin/photos", "Team Photos"],
   ["/admin/signups", "Signups"],
   ["/admin/booster-club", "Booster Club"],
   ["/admin/settings", "Settings"],
