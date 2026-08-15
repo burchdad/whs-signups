@@ -19,7 +19,7 @@ export const sportsOffered = [
 
 export type SportName = (typeof sportsOffered)[number];
 
-export const groupPrograms = ["Band", "Choir", "Other School Club"] as const;
+export const groupPrograms = ["Band", "Choir", "Dance", "Other School Club"] as const;
 export const participationAreas = [...sportsOffered, ...groupPrograms] as const;
 export type ParticipationArea = (typeof participationAreas)[number];
 

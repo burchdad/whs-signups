@@ -89,9 +89,21 @@ export type BoosterClubSignup = {
   email: string;
   normalizedEmail: string;
   phone: string;
+  programId: string;
+  programName: string;
   selectedSports: string[];
   gearPreference: "hat" | "shirt";
   openToVolunteering: boolean;
   interestedInSponsoring: boolean;
+  paymentStatus: "not_required" | "pending" | "paid" | "failed" | "refunded";
+  paymentAmountCents: number;
   createdAt: string;
+};
+
+export type BoosterProgram = {
+  id: string;
+  name: string;
+  sports: string[];
+  membershipFeeCents: number;
+  paymentRequired: boolean;
 };

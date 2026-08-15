@@ -36,6 +36,9 @@ The environment-based administrator is the bootstrap Super Admin. From **Admin â
 The verified 2026 football home schedule is installed automatically and represented by `db/migrations/007_football_2026_home_schedule.sql`. The athletics site currently exposes only a 2025 Cross Country schedule, so no expired Cross Country meets are published as current opportunities.
 - `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `ADMIN_NOTIFICATION_EMAIL`: transactional email settings.
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`: optional spam prevention.
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`: secure Booster Club Checkout and signed payment fulfillment. Configure the webhook endpoint as `/api/webhooks/stripe`.
+
+Each Booster Club is stored as a separate admin program. Public signups select a Booster Club before selecting its programs, and the program name, payment status, and amount are preserved in scoped admin views and CSV exports. Super Admins configure each club's membership fee and whether Stripe payment is required from **Admin â†’ Access**.
 
 ## Railway Postgres Setup
 
@@ -125,4 +128,4 @@ Tests cover date parsing, time parsing, column normalization, home-game detectio
 - Admin create/edit buttons are UI-ready shells until Railway-backed write screens are expanded.
 - Import publishing is represented by parser/API/migration foundations; the final duplicate merge/skip UI needs a follow-up pass.
 - Email retry storage is designed through `email_logs` but retry UI is not implemented.
-- SMS, payment, student accounts, recurring reminders, and multi-organization billing are intentionally out of scope for this MVP.
+- SMS, student accounts, and multi-organization billing are intentionally out of scope for this MVP.

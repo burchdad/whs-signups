@@ -2,11 +2,12 @@ import { eventOpenPositions, eventStatus, isEventSignupOpen, isSlotAvailable } f
 import { getPool, hasDatabaseUrl, withTransaction } from "./db";
 import { events, organization, sampleSignups, templates } from "./demo-data";
 import { createToken, hashToken, verifyToken } from "./tokens";
-import type { AdminSignupRow, BoosterClubSignup, Signup, VolunteerEvent, VolunteerTemplate } from "./types";
+import type { AdminSignupRow, BoosterClubSignup, BoosterProgram, Signup, VolunteerEvent, VolunteerTemplate } from "./types";
 import { normalizeEmail, slugify } from "./utils";
 import type { BoosterClubSignupInput, SignupInput } from "./validation";
 import { sportPhotos, sportsOffered, type SportName } from "./sports";
 import { ensureKnownSchedules } from "./known-schedules";
+import { ensureAdminAccessSchema } from "./admin-access";
 
 export async function listPublicEvents() {
   if (!hasDatabaseUrl()) return events.filter((event) => event.isPublished && !event.isArchived);
@@ -82,7 +83,7 @@ export async function listAdminEvents(allowedSports: string[] | null = null) {
   return allowedSports === null ? allEvents : allEvents.filter((event) => allowedSports.includes(event.sport));
 }
 
-export async function getAdminMetrics(allowedSports: string[] | null = null) {
+export async function getAdminMetrics(allowedSports: string[] | null = null, allowedProgramIds: string[] | null = null) {
   const allEvents = await listAdminEvents(allowedSports);
   const upcoming = allEvents.filter((event) => new Date(event.startsAt) > new Date());
   const baseMetrics = {
@@ -99,7 +100,7 @@ export async function getAdminMetrics(allowedSports: string[] | null = null) {
   };
   if (hasDatabaseUrl()) {
     try {
-      const [allSignups, booster, recent] = await Promise.all([listAdminSignups(5000, allowedSports), listBoosterClubSignups(5000, allowedSports), listAdminSignups(5, allowedSports)]);
+      const [allSignups, booster, recent] = await Promise.all([listAdminSignups(5000, allowedSports), listBoosterClubSignups(5000, allowedSports, allowedProgramIds), listAdminSignups(5, allowedSports)]);
       const sportCounts = new Map<string, number>();
       for (const signup of booster) for (const sport of signup.selectedSports) if (allowedSports === null || allowedSports.includes(sport)) sportCounts.set(sport, (sportCounts.get(sport) ?? 0) + 1);
       return {
@@ -154,7 +155,7 @@ export type SignupResult =
   | { ok: false; code: "slot_full" | "event_closed" | "slot_closed" | "not_found"; message: string };
 
 export type BoosterClubSignupResult =
-  | { ok: true; id: string }
+  | { ok: true; id: string; program: BoosterProgram }
   | { ok: false; code: "not_ready" | "failed"; message: string };
 
 export async function createSignup(input: SignupInput): Promise<SignupResult> {
@@ -284,15 +285,50 @@ export async function listAdminSignups(limit = 200, allowedSports: string[] | nu
   }
 }
 
-export async function listBoosterClubSignups(limit = 500, allowedSports: string[] | null = null): Promise<BoosterClubSignup[]> {
+export async function listBoosterClubSignups(limit = 500, allowedSports: string[] | null = null, allowedProgramIds: string[] | null = null): Promise<BoosterClubSignup[]> {
   if (!hasDatabaseUrl()) return [];
   try {
-    const { rows } = await getPool().query("select * from booster_club_signups where ($2::text[] is null or selected_sports && $2::text[]) order by created_at desc limit $1", [limit, allowedSports]);
+    await ensureAdminAccessSchema();
+    const { rows } = await getPool().query("select * from booster_club_signups where ($2::text[] is null or selected_sports && $2::text[]) and ($3::uuid[] is null or program_id = any($3::uuid[])) order by created_at desc limit $1", [limit, allowedSports, allowedProgramIds]);
     return rows.map(rowToBoosterClubSignup);
   } catch (error) {
     if (isMissingDatabaseSchema(error)) return [];
     throw error;
   }
+}
+
+const defaultBoosterPrograms = [
+  { name: "Whitehouse Community Booster Club", sports: ["Basketball (Boys)", "Basketball (Girls)", "Cross Country (Coed)", "Football", "Golf (Girls)", "Soccer (Boys)", "Soccer (Girls)", "Swimming and Diving (Coed)", "Tennis (Coed)", "Track and Field (Boys)", "Track and Field (Girls)", "Volleyball", "Wrestling (Coed)"] },
+  { name: "Baseball Booster Club", sports: ["Baseball"] },
+  { name: "Softball Booster Club", sports: ["Softball"] },
+  { name: "Cheer Booster Club", sports: ["Cheerleading (Girls)"] },
+  { name: "Dance Booster Club", sports: ["Dance"] },
+] as const;
+
+async function ensureDefaultBoosterPrograms() {
+  if (!hasDatabaseUrl()) return;
+  await ensureAdminAccessSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query("begin");
+    for (const program of defaultBoosterPrograms) {
+      const { rows } = await client.query("insert into admin_programs (organization_id,name,program_type,membership_fee_cents,payment_required) values ($1,$2,'booster_club',100,true) on conflict (organization_id,name) do update set program_type='booster_club' returning id", [organization.id, program.name]);
+      for (const sport of program.sports) await client.query("insert into admin_program_sports (program_id,sport_name) values ($1,$2) on conflict do nothing", [rows[0].id, sport]);
+    }
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function listPublicBoosterPrograms(): Promise<BoosterProgram[]> {
+  if (!hasDatabaseUrl()) return [];
+  await ensureDefaultBoosterPrograms();
+  const { rows } = await getPool().query(`select p.id,p.name,p.membership_fee_cents,p.payment_required,coalesce(array_agg(ps.sport_name order by ps.sport_name) filter (where ps.sport_name is not null),'{}') sports from admin_programs p left join admin_program_sports ps on ps.program_id=p.id where p.program_type='booster_club' and p.is_active=true group by p.id order by p.name`);
+  return rows.map((row) => ({ id: String(row.id), name: String(row.name), sports: row.sports as string[], membershipFeeCents: Number(row.membership_fee_cents ?? 0), paymentRequired: Boolean(row.payment_required) }));
 }
 
 export async function updateEventDetails(input: { id: string; title: string; opponent?: string; eventDate: string; startsAt: string; location: string; description?: string; contactName?: string; contactEmail?: string }) {
@@ -460,9 +496,16 @@ export async function createVolunteerTemplate(input: { name: string; description
 }
 
 export async function createBoosterClubSignup(input: BoosterClubSignupInput): Promise<BoosterClubSignupResult> {
-  if (!hasDatabaseUrl()) return { ok: true, id: crypto.randomUUID() };
+  if (!hasDatabaseUrl()) return { ok: false, code: "not_ready", message: "Booster Club signups are not ready yet. Please try again soon." };
 
   try {
+    await ensureDefaultBoosterPrograms();
+    const programs = await listPublicBoosterPrograms();
+    const program = programs.find((candidate) => candidate.id === input.programId);
+    if (!program) return { ok: false, code: "failed", message: "Choose an active Booster Club." };
+    const allowedSports = new Set(program.sports);
+    if (input.selectedSports.some((sport) => !allowedSports.has(sport))) return { ok: false, code: "failed", message: "One or more selected sports do not belong to that Booster Club." };
+    const paymentAmountCents = program.paymentRequired ? program.membershipFeeCents : 0;
     const { rows } = await getPool().query(
       `
       with org as (
@@ -473,10 +516,11 @@ export async function createBoosterClubSignup(input: BoosterClubSignupInput): Pr
       )
       insert into booster_club_signups (
         organization_id, first_name, last_name, email, normalized_email, phone,
-        selected_sports, gear_preference, open_to_volunteering, interested_in_sponsoring
+        program_id, program_name, selected_sports, gear_preference, open_to_volunteering, interested_in_sponsoring,
+        payment_status, payment_amount_cents
       )
       select
-        org.id, $1, $2, $3, $4, $5, $6, $7, $8, $9
+        org.id, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
       from org
       returning id
       `,
@@ -486,20 +530,40 @@ export async function createBoosterClubSignup(input: BoosterClubSignupInput): Pr
         input.email.trim(),
         normalizeEmail(input.email),
         input.phone.trim(),
+        program.id,
+        program.name,
         input.selectedSports,
         input.gearPreference,
         input.openToVolunteering === "yes",
         input.interestedInSponsoring === "yes",
+        paymentAmountCents > 0 ? "pending" : "not_required",
+        paymentAmountCents,
       ],
     );
     if (!rows[0]) return { ok: false, code: "not_ready", message: "Booster Club signups are not ready yet. Please try again soon." };
-    return { ok: true, id: String(rows[0].id) };
+    return { ok: true, id: String(rows[0].id), program };
   } catch (error) {
     if (isMissingDatabaseSchema(error)) {
       return { ok: false, code: "not_ready", message: "Booster Club signups are being set up. Please try again soon." };
     }
     return { ok: false, code: "failed", message: "We could not complete the Booster Club signup. Please try again." };
   }
+}
+
+export async function attachBoosterCheckoutSession(signupId: string, sessionId: string) {
+  await getPool().query("update booster_club_signups set stripe_checkout_session_id=$2, updated_at=now() where id=$1 and payment_status='pending'", [signupId, sessionId]);
+}
+
+export async function markBoosterPaymentPaid(input: { sessionId: string; paymentIntentId?: string }) {
+  if (!hasDatabaseUrl()) return;
+  await ensureAdminAccessSchema();
+  await getPool().query("update booster_club_signups set payment_status='paid', stripe_payment_intent_id=nullif($2,''), paid_at=coalesce(paid_at,now()), updated_at=now() where stripe_checkout_session_id=$1", [input.sessionId, input.paymentIntentId ?? ""]);
+}
+
+export async function markBoosterPaymentFailed(sessionId: string) {
+  if (!hasDatabaseUrl()) return;
+  await ensureAdminAccessSchema();
+  await getPool().query("update booster_club_signups set payment_status='failed', updated_at=now() where stripe_checkout_session_id=$1 and payment_status='pending'", [sessionId]);
 }
 
 export async function getCancellationByToken(token: string) {
@@ -648,10 +712,14 @@ function rowToBoosterClubSignup(row: Record<string, unknown>): BoosterClubSignup
     email: String(row.email),
     normalizedEmail: String(row.normalized_email),
     phone: String(row.phone),
+    programId: row.program_id ? String(row.program_id) : "",
+    programName: row.program_name ? String(row.program_name) : "Legacy Booster Club",
     selectedSports: Array.isArray(row.selected_sports) ? row.selected_sports.map(String) : [],
     gearPreference: row.gear_preference as BoosterClubSignup["gearPreference"],
     openToVolunteering: Boolean(row.open_to_volunteering),
     interestedInSponsoring: Boolean(row.interested_in_sponsoring),
+    paymentStatus: String(row.payment_status ?? "not_required") as BoosterClubSignup["paymentStatus"],
+    paymentAmountCents: Number(row.payment_amount_cents ?? 0),
     createdAt: toIso(row.created_at),
   };
 }

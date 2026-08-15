@@ -27,6 +27,18 @@ export function ensureAdminAccessSchema() {
         create table if not exists admin_program_sports (program_id uuid not null references admin_programs(id) on delete cascade, sport_name text not null, primary key (program_id, sport_name));
         alter table events add column if not exists admin_program_id uuid references admin_programs(id) on delete set null;
         alter table events add column if not exists owner_admin_user_id uuid references admin_users(id) on delete set null;
+        alter table admin_programs add column if not exists membership_fee_cents integer not null default 0;
+        alter table admin_programs add column if not exists payment_required boolean not null default false;
+        alter table admin_programs add column if not exists stripe_price_id text;
+        alter table booster_club_signups add column if not exists program_id uuid references admin_programs(id) on delete restrict;
+        alter table booster_club_signups add column if not exists program_name text;
+        alter table booster_club_signups add column if not exists payment_status text not null default 'not_required';
+        alter table booster_club_signups add column if not exists payment_amount_cents integer not null default 0;
+        alter table booster_club_signups add column if not exists stripe_checkout_session_id text;
+        alter table booster_club_signups add column if not exists stripe_payment_intent_id text;
+        alter table booster_club_signups add column if not exists paid_at timestamptz;
+        create index if not exists booster_club_signups_program_idx on booster_club_signups (program_id, created_at desc);
+        create unique index if not exists booster_club_signups_checkout_session_idx on booster_club_signups (stripe_checkout_session_id) where stripe_checkout_session_id is not null;
       `);
     } finally {
       await client.query("select pg_advisory_unlock(hashtext('whssignups_admin_access'))").catch(() => undefined);
@@ -98,7 +110,7 @@ export async function listAdminPrograms() {
   await ensureAdminAccessSchema();
   if (!hasDatabaseUrl()) return [];
   const { rows } = await getPool().query(`select p.*, coalesce(array_agg(ps.sport_name order by ps.sport_name) filter (where ps.sport_name is not null), '{}') sports from admin_programs p left join admin_program_sports ps on ps.program_id = p.id group by p.id order by p.name`);
-  return rows.map((row) => ({ id: String(row.id), name: String(row.name), type: String(row.program_type), notificationEmail: row.notification_email ? String(row.notification_email) : "", sports: row.sports as string[] }));
+  return rows.map((row) => ({ id: String(row.id), name: String(row.name), type: String(row.program_type), notificationEmail: row.notification_email ? String(row.notification_email) : "", sports: row.sports as string[], membershipFeeCents: Number(row.membership_fee_cents ?? 0), paymentRequired: Boolean(row.payment_required), stripePriceId: row.stripe_price_id ? String(row.stripe_price_id) : "" }));
 }
 
 export async function listAdminAccounts() {
@@ -131,18 +143,40 @@ export async function getAssignableAdminOwner(session: AdminSession, targetId: s
   return (await listAssignableAdminAccounts(session)).find((account) => account.id === targetId);
 }
 
-export async function createAdminProgram(input: { organizationId: string; name: string; type: string; notificationEmail?: string; sports: string[]; actorId: string }) {
+export async function createAdminProgram(input: { organizationId: string; name: string; type: string; notificationEmail?: string; sports: string[]; membershipFeeCents?: number; paymentRequired?: boolean; actorId: string }) {
   await ensureAdminAccessSchema();
   const client = await getPool().connect();
   try {
     await client.query("begin");
-    const { rows } = await client.query("insert into admin_programs (organization_id, name, program_type, notification_email) values ($1,$2,$3,nullif($4,'')) returning id", [input.organizationId, input.name.trim(), input.type, input.notificationEmail?.trim() || ""]);
+    const { rows } = await client.query("insert into admin_programs (organization_id, name, program_type, notification_email, membership_fee_cents, payment_required) values ($1,$2,$3,nullif($4,''),$5,$6) returning id", [input.organizationId, input.name.trim(), input.type, input.notificationEmail?.trim() || "", input.membershipFeeCents ?? 0, Boolean(input.paymentRequired && (input.membershipFeeCents ?? 0) > 0)]);
     const id = String(rows[0].id);
     for (const sport of input.sports) await client.query("insert into admin_program_sports (program_id, sport_name) values ($1,$2) on conflict do nothing", [id, sport]);
     await client.query("insert into audit_logs (organization_id, actor_user_id, action, entity_type, entity_id, metadata) values ($1,$2,'program.created','admin_program',$3,$4)", [input.organizationId, input.actorId, id, JSON.stringify({ name: input.name, sports: input.sports })]);
     await client.query("commit");
     return id;
   } catch (error) { await client.query("rollback"); throw error; } finally { client.release(); }
+}
+
+export async function updateAdminProgramBilling(input: { programId: string; membershipFeeCents: number; paymentRequired: boolean; stripePriceId?: string; actorId: string; organizationId: string }) {
+  await ensureAdminAccessSchema();
+  await getPool().query(
+    "update admin_programs set membership_fee_cents=$2, payment_required=$3, stripe_price_id=nullif($4,'') where id=$1 and organization_id=$5",
+    [input.programId, input.membershipFeeCents, input.paymentRequired && input.membershipFeeCents > 0, input.stripePriceId?.trim() ?? "", input.organizationId],
+  );
+  await getPool().query("insert into audit_logs (organization_id, actor_user_id, action, entity_type, entity_id, metadata) values ($1,$2,'program.billing_updated','admin_program',$3,$4)", [input.organizationId, input.actorId, input.programId, JSON.stringify({ membershipFeeCents: input.membershipFeeCents, paymentRequired: input.paymentRequired })]);
+}
+
+export async function adminNotificationRecipientsForProgram(programId: string) {
+  if (!hasDatabaseUrl()) return [];
+  await ensureAdminAccessSchema();
+  const { rows } = await getPool().query(`
+    select email from (
+      select distinct u.email from admin_users u left join admin_program_memberships m on m.admin_user_id=u.id where u.is_active=true and (u.role in ('super_admin','organization_admin') or m.program_id=$1)
+      union
+      select p.notification_email as email from admin_programs p where p.id=$1 and p.is_active=true and p.notification_email is not null
+    ) recipients
+  `, [programId]);
+  return rows.map((row) => String(row.email)).filter(Boolean);
 }
 
 export async function createAdminAccount(input: { organizationId: string; name: string; email: string; password: string; role: AdminRole; programIds: string[]; actorId: string }) {

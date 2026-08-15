@@ -3,13 +3,15 @@ import Link from "next/link";
 import { BadgeDollarSign, HandHeart, Shirt, Trophy } from "lucide-react";
 import { BrandHeader } from "@/components/brand-header";
 import { BoosterClubForm } from "@/components/forms/booster-club-form";
-import { sportsOffered, type SportName } from "@/lib/sports";
+import { listPublicBoosterPrograms } from "@/lib/repository";
+import { participationAreas, type ParticipationArea } from "@/lib/sports";
 
 export const dynamic = "force-dynamic";
 
-export default async function BoosterClubPage({ searchParams }: { searchParams: Promise<{ sport?: string }> }) {
-  const { sport } = await searchParams;
-  const defaultSports: SportName[] = sport && sportsOffered.includes(sport as SportName) ? [sport as SportName] : ["Volleyball"];
+export default async function BoosterClubPage({ searchParams }: { searchParams: Promise<{ sport?: string; checkout?: string }> }) {
+  const [{ sport, checkout }, programs] = await Promise.all([searchParams, listPublicBoosterPrograms()]);
+  const defaultProgram = programs.find((program) => sport && program.sports.includes(sport)) ?? programs.find((program) => program.name === "Whitehouse Community Booster Club") ?? programs[0];
+  const defaultSports: ParticipationArea[] = (sport && defaultProgram?.sports.includes(sport) ? [sport] : defaultProgram?.sports.slice(0, 1) ?? []).filter((item): item is ParticipationArea => participationAreas.includes(item as ParticipationArea));
   return (
     <>
       <BrandHeader />
@@ -30,7 +32,7 @@ export default async function BoosterClubPage({ searchParams }: { searchParams: 
               </div>
             </div>
             <div>
-              <p className="eyebrow">Whitehouse High School Athletics</p>
+              <p className="eyebrow">Whitehouse community programs</p>
               <h2 className="mt-3 max-w-3xl text-5xl font-black uppercase leading-none tracking-tight sm:text-6xl">Built for the people behind the teams.</h2>
               <div className="mt-6 grid gap-3 sm:grid-cols-3">
                 {[
@@ -51,9 +53,10 @@ export default async function BoosterClubPage({ searchParams }: { searchParams: 
           <div>
             <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-[var(--maroon)]"><Trophy size={16} aria-hidden /> Booster signup</p>
             <h2 className="mt-1 text-3xl font-black uppercase text-[var(--ink)]">Tell us where you fit.</h2>
-            <p className="mt-3 font-medium text-[var(--muted)]">For now this is one Booster Club list. Later, this page can grow into multiple Booster Club options without changing the core signup flow.</p>
+            <p className="mt-3 font-medium text-[var(--muted)]">Choose the exact Booster Club you are joining. Your signup, payment, administrator access, and roster export will stay with that organization.</p>
+            {checkout === "cancelled" ? <p role="status" className="mt-4 rounded-sm bg-[#fff8e8] p-3 font-semibold text-[var(--maroon-dark)]">Checkout was cancelled. Your signup is saved as payment pending; submit again when you are ready to pay.</p> : null}
           </div>
-          <BoosterClubForm turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} defaultSports={defaultSports} />
+          {programs.length > 0 ? <BoosterClubForm turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY} programs={programs} defaultProgramId={defaultProgram?.id} defaultSports={defaultSports} /> : <p className="rounded-sm border border-[var(--border)] bg-white p-5 font-semibold text-[var(--muted)]">Booster Club enrollment is being prepared. Please check back soon.</p>}
         </section>
       </main>
     </>

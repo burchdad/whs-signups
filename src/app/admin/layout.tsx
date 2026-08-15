@@ -22,7 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <header className="sticky top-0 z-30 border-b border-black/20 bg-[var(--ink)] text-white shadow-lg">
         <div className="bg-[var(--maroon-dark)]">
           <div className="container flex min-h-8 items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.16em] text-white/80">
-            <span>Whitehouse athletics command center</span>
+            <span>Whitehouse signup command center</span>
             <Link href="/" className="text-[var(--gold)] hover:text-white">Public site</Link>
           </div>
         </div>
