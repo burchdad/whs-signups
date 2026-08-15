@@ -3,6 +3,8 @@ import { googleCalendarUrl } from "../calendar";
 import type { Signup, VolunteerEvent, VolunteerSlot } from "../types";
 import type { BoosterClubSignupInput } from "../validation";
 import { appUrl, formatDateTime } from "../utils";
+import { getOrganizationEmailSettings } from "../admin-access";
+import { hasDatabaseUrl } from "../db";
 
 let resend: Resend | null = null;
 
@@ -24,7 +26,7 @@ function button(label: string, url: string, secondary = false) {
 }
 
 function notificationRecipients(event?: VolunteerEvent, additional: string[] = []) {
-  return [...new Set([process.env.ADMIN_NOTIFICATION_EMAIL, process.env.ADMIN_EMAIL, event?.contactEmail, ...additional].filter((value): value is string => Boolean(value?.trim())).map((value) => value.trim().toLowerCase()))];
+  return [...new Set([event?.contactEmail, ...additional].filter((value): value is string => Boolean(value?.trim())).map((value) => value.trim().toLowerCase()))];
 }
 
 async function send(input: { to: string | string[]; subject: string; text: string; html: string; replyTo?: string; idempotencyKey: string }) {
@@ -36,13 +38,17 @@ async function send(input: { to: string | string[]; subject: string; text: strin
     return { provider: "console", status: "queued" as const };
   }
   try {
+    const settings = hasDatabaseUrl() ? await getOrganizationEmailSettings() : undefined;
+    const configuredFrom = process.env.RESEND_FROM_EMAIL || "WHSSignups <noreply@whssignups.com>";
+    const configuredAddress = configuredFrom.match(/<([^>]+)>/)?.[1] || configuredFrom;
+    const from = settings?.senderAddress ? `${settings.senderName} <${settings.senderAddress}>` : configuredFrom;
     const result = await provider.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || "WHSSignups <noreply@whssignups.com>",
+      from: settings?.senderAddress?.endsWith(`@${configuredAddress.split("@")[1]}`) ? from : configuredFrom,
       to: recipients,
       subject: input.subject,
       text: input.text,
       html: input.html,
-      replyTo: input.replyTo,
+      replyTo: input.replyTo || settings?.replyToEmail || undefined,
     }, { idempotencyKey: input.idempotencyKey });
     if (result.error) throw new Error(result.error.message);
     return { provider: "resend", status: "sent" as const, id: result.data?.id };
