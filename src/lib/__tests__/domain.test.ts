@@ -3,6 +3,7 @@ import { eventOpenPositions, eventStatus, isEventSignupOpen, isSlotAvailable, re
 import { verifyAdminCredentials } from "../auth";
 import { events, sampleSignups } from "../demo-data";
 import { boosterClubToCsv, signupsToCsv } from "../exports";
+import { createIcs, googleCalendarUrl } from "../calendar";
 import { hashToken, verifyToken } from "../tokens";
 import { centralLocalToIso, isoToCentralLocalInput, slugify } from "../utils";
 import { signupSchema } from "../validation";
@@ -18,6 +19,13 @@ describe("domain behavior", () => {
     expect(centralLocalToIso("2026-12-15T18:00")).toBe("2026-12-16T00:00:00.000Z");
     expect(centralLocalToIso("2026-08-15T18:00")).toBe("2026-08-15T23:00:00.000Z");
     expect(isoToCentralLocalInput("2026-12-16T00:00:00.000Z")).toBe("2026-12-15T18:00");
+  });
+
+  it("gives calendar entries a useful default duration", () => {
+    const event = { ...events[0], startsAt: "2026-12-16T00:00:00.000Z", endsAt: undefined };
+    const slot = { ...event.slots[0], shiftStart: undefined, shiftEnd: undefined };
+    expect(googleCalendarUrl(event, slot)).toContain("20261216T000000Z%2F20261216T020000Z");
+    expect(createIcs(event, slot)).toContain("DTEND:20261216T020000Z");
   });
 
   it("calculates slot availability", () => {

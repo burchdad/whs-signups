@@ -5,19 +5,25 @@ function icsDate(value: string) {
   return new Date(value).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
 }
 
+function calendarRange(event: VolunteerEvent, slot: VolunteerSlot) {
+  const start = slot.shiftStart || event.startsAt;
+  const end = slot.shiftEnd || event.endsAt || new Date(new Date(start).getTime() + 2 * 60 * 60 * 1000).toISOString();
+  return { start, end };
+}
+
 export function googleCalendarUrl(event: VolunteerEvent, slot: VolunteerSlot) {
+  const { start, end } = calendarRange(event, slot);
   const url = new URL("https://calendar.google.com/calendar/render");
   url.searchParams.set("action", "TEMPLATE");
   url.searchParams.set("text", `${event.title} - ${slot.name}`);
-  url.searchParams.set("dates", `${icsDate(slot.shiftStart || event.startsAt)}/${icsDate(slot.shiftEnd || event.endsAt || event.startsAt)}`);
+  url.searchParams.set("dates", `${icsDate(start)}/${icsDate(end)}`);
   url.searchParams.set("location", event.location);
   url.searchParams.set("details", `Volunteer position: ${slot.name}\n${appUrl(`/events/${event.slug}`)}`);
   return url.toString();
 }
 
 export function createIcs(event: VolunteerEvent, slot: VolunteerSlot) {
-  const start = slot.shiftStart || event.startsAt;
-  const end = slot.shiftEnd || event.endsAt || event.startsAt;
+  const { start, end } = calendarRange(event, slot);
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
