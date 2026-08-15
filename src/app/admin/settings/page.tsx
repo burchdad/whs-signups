@@ -8,6 +8,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const session = await requireAdmin();
   const [status, programs, emailSettings] = await Promise.all([searchParams, listAdminProgramsForSession(session), getOrganizationEmailSettings(session.organizationId)]);
   const boosterPrograms = programs.filter((program) => program.type === "booster_club");
+  const configuredFrom = process.env.RESEND_FROM_EMAIL || "WHSSignups <noreply@whssignups.com>";
+  const verifiedSenderAddress = configuredFrom.match(/<([^>]+)>/)?.[1] || configuredFrom;
 
   return <div className="grid max-w-3xl gap-6">
     {canManageOrganizationSettings(session) ? <form action={saveOrganizationEmailSettings} className="wildcat-card grid gap-4 rounded-sm p-5">
@@ -15,7 +17,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       {status.email === "organization" ? <p role="status" className="rounded-sm bg-[#f1fbf3] p-3 font-black text-[#225c2d]">Organization email settings saved.</p> : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-1.5"><span className="font-black uppercase tracking-wide">Sender display name</span><input name="senderName" className="field" defaultValue={emailSettings.senderName} required /></label>
-        <label className="grid gap-1.5"><span className="font-black uppercase tracking-wide">Sender address</span><input name="senderAddress" type="email" className="field" defaultValue={emailSettings.senderAddress || "noreply@whssignups.com"} required /></label>
+        <label className="grid gap-1.5"><span className="font-black uppercase tracking-wide">Sender address</span><input name="senderAddress" type="email" className="field" defaultValue={emailSettings.senderAddress || verifiedSenderAddress} required /><small className="font-medium text-[var(--muted)]">Must use the verified {verifiedSenderAddress.split("@")[1]} domain.</small></label>
         <label className="grid gap-1.5"><span className="font-black uppercase tracking-wide">Public contact email</span><input name="contactEmail" type="email" className="field" defaultValue={emailSettings.contactEmail} required /></label>
         <label className="grid gap-1.5"><span className="font-black uppercase tracking-wide">Default reply-to email</span><input name="replyToEmail" type="email" className="field" defaultValue={emailSettings.replyToEmail || emailSettings.contactEmail} required /></label>
       </div>
