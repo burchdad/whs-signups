@@ -21,12 +21,13 @@ export function isEventSignupOpen(event: VolunteerEvent, now = new Date()) {
   return true;
 }
 
-export function eventOpenPositions(event: VolunteerEvent) {
-  return event.slots.reduce((sum, slot) => sum + remainingCount(slot), 0);
+export function eventOpenPositions(event: VolunteerEvent, now = new Date()) {
+  if (!isEventSignupOpen(event, now)) return 0;
+  return event.slots.reduce((sum, slot) => sum + (slot.isOpen && slot.isVisible ? remainingCount(slot) : 0), 0);
 }
 
 export function eventStatus(event: VolunteerEvent, now = new Date()): "open" | "full" | "closed" | "draft" {
   if (!event.isPublished) return "draft";
   if (!isEventSignupOpen(event, now)) return "closed";
-  return eventOpenPositions(event) > 0 ? "open" : "full";
+  return eventOpenPositions(event, now) > 0 ? "open" : "full";
 }

@@ -24,7 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="container flex flex-wrap items-center justify-between gap-4 py-3">
           <Link href="/admin" className="flex items-center gap-3">
             <span className="grid h-14 w-16 place-items-center rounded-sm bg-white">
-              <Image src="/brand/whs-logo.png" alt="Whitehouse Wildcats logo" width={58} height={48} priority />
+              <Image src="/brand/whs-logo.png" alt="Whitehouse Wildcats logo" width={58} height={44} priority />
             </span>
             <span>
               <span className="block text-2xl font-black uppercase tracking-tight">WHSSignups Admin</span>

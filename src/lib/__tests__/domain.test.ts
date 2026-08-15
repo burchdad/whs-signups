@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { eventOpenPositions, isEventSignupOpen, isSlotAvailable, remainingCount } from "../availability";
+import { eventOpenPositions, eventStatus, isEventSignupOpen, isSlotAvailable, remainingCount } from "../availability";
+import { verifyAdminCredentials } from "../auth";
 import { events, sampleSignups } from "../demo-data";
 import { signupsToCsv } from "../exports";
 import { hashToken, verifyToken } from "../tokens";
 import { slugify } from "../utils";
 import { signupSchema } from "../validation";
+import { sportFromSlug, sportsOffered } from "../sports";
 
 describe("domain behavior", () => {
   it("generates event slugs", () => {
@@ -15,7 +17,7 @@ describe("domain behavior", () => {
     const slot = events[0].slots[0];
     expect(remainingCount(slot)).toBe(6);
     expect(isSlotAvailable(slot)).toBe(true);
-    expect(eventOpenPositions(events[0])).toBe(8);
+    expect(eventOpenPositions(events[0], new Date("2026-01-01T00:00:00.000Z"))).toBe(8);
   });
 
   it("rejects full slots", async () => {
@@ -43,6 +45,29 @@ describe("domain behavior", () => {
   it("treats closed or past events as unavailable", () => {
     expect(isEventSignupOpen({ ...events[0], isPublished: false })).toBe(false);
     expect(isEventSignupOpen({ ...events[0], startsAt: "2020-01-01T12:00:00.000Z" })).toBe(false);
+    expect(eventOpenPositions({ ...events[0], startsAt: "2020-01-01T12:00:00.000Z" })).toBe(0);
+    expect(eventStatus({ ...events[0], startsAt: "2020-01-01T12:00:00.000Z" })).toBe("closed");
+  });
+
+  it("does not count closed or hidden slots as open positions", () => {
+    const slots = events[0].slots.map((slot, index) => index === 0 ? { ...slot, isOpen: false } : { ...slot, isVisible: false });
+    expect(eventOpenPositions({ ...events[0], slots }, new Date("2026-01-01T00:00:00.000Z"))).toBe(0);
+  });
+
+  it("fails admin authentication closed when credentials are missing", () => {
+    const previousEmail = process.env.ADMIN_EMAIL;
+    const previousPassword = process.env.ADMIN_PASSWORD;
+    delete process.env.ADMIN_EMAIL;
+    delete process.env.ADMIN_PASSWORD;
+    expect(verifyAdminCredentials("admin@example.com", "anything")).toBe(false);
+    if (previousEmail) process.env.ADMIN_EMAIL = previousEmail;
+    if (previousPassword) process.env.ADMIN_PASSWORD = previousPassword;
+  });
+
+  it("keeps legacy sport URLs without showing duplicate sports", () => {
+    expect(new Set(sportsOffered).size).toBe(sportsOffered.length);
+    expect(sportFromSlug("volleyball-girls")).toBe("Volleyball");
+    expect(sportFromSlug("football-boys")).toBe("Football");
   });
 
   it("exports signup data as csv", () => {

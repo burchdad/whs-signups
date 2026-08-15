@@ -15,6 +15,11 @@ export async function requireAdmin() {
   };
 }
 
+export async function isAdminAuthenticated() {
+  const cookieStore = await cookies();
+  return isValidAdminSession(cookieStore.get(COOKIE_NAME)?.value);
+}
+
 export async function createAdminSession() {
   const cookieStore = await cookies();
   cookieStore.set(COOKIE_NAME, signSession(), {
@@ -32,20 +37,22 @@ export async function clearAdminSession() {
 }
 
 export function verifyAdminCredentials(email: string, password: string) {
-  const expectedEmail = process.env.ADMIN_EMAIL || "admin@whssignups.com";
+  const expectedEmail = process.env.ADMIN_EMAIL;
   const expectedPassword = process.env.ADMIN_PASSWORD;
+  if (!expectedEmail || !expectedPassword) return false;
   if (email.trim().toLowerCase() !== expectedEmail.trim().toLowerCase()) return false;
-  if (!expectedPassword) return true;
   return safeEqual(password, expectedPassword);
 }
 
 function signSession() {
-  const payload = `${process.env.ADMIN_EMAIL || "admin@whssignups.com"}:${Math.floor(Date.now() / 1000)}`;
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (!adminEmail || !process.env.ADMIN_SESSION_SECRET) throw new Error("Admin authentication is not configured.");
+  const payload = `${adminEmail}:${Math.floor(Date.now() / 1000)}`;
   return `${payload}.${signature(payload)}`;
 }
 
 function isValidAdminSession(token?: string) {
-  if (!token) return false;
+  if (!token || !process.env.ADMIN_SESSION_SECRET || !process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) return false;
   const separator = token.lastIndexOf(".");
   if (separator < 1) return false;
   const payload = token.slice(0, separator);
@@ -56,7 +63,9 @@ function isValidAdminSession(token?: string) {
 }
 
 function signature(payload: string) {
-  return createHmac("sha256", process.env.ADMIN_SESSION_SECRET || "dev-whs-admin-session").update(payload).digest("hex");
+  const secret = process.env.ADMIN_SESSION_SECRET;
+  if (!secret) return "";
+  return createHmac("sha256", secret).update(payload).digest("hex");
 }
 
 function safeEqual(left: string, right: string) {

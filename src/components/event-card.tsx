@@ -12,6 +12,7 @@ const statusLabels = {
 
 export function EventCard({ event }: { event: VolunteerEvent }) {
   const status = eventStatus(event);
+  const openPositions = eventOpenPositions(event);
   const date = new Date(event.startsAt);
   return (
     <article className="wildcat-card overflow-hidden rounded-sm">
@@ -33,7 +34,7 @@ export function EventCard({ event }: { event: VolunteerEvent }) {
           </div>
           <dl className="mt-4 grid gap-2 text-sm font-medium text-[var(--muted)]">
             <div className="flex items-center gap-2"><MapPin size={16} aria-hidden /> <dt className="sr-only">Location</dt><dd>{event.location}</dd></div>
-            <div className="flex items-center gap-2"><Users size={16} aria-hidden /> <dt className="sr-only">Open positions</dt><dd>{eventOpenPositions(event)} open volunteer positions</dd></div>
+            <div className="flex items-center gap-2"><Users size={16} aria-hidden /> <dt className="sr-only">Availability</dt><dd>{status === "closed" ? "Signups closed" : `${openPositions} open volunteer ${openPositions === 1 ? "position" : "positions"}`}</dd></div>
           </dl>
           <div className="mt-5 flex flex-wrap gap-2">
             {event.schedule.map((item) => (
