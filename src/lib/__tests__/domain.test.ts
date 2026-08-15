@@ -7,6 +7,7 @@ import { hashToken, verifyToken } from "../tokens";
 import { slugify } from "../utils";
 import { signupSchema } from "../validation";
 import { sportFromSlug, sportsOffered } from "../sports";
+import { canManageOrganizationSettings, canManageProgramPayments, parseEmailList, type AdminSession } from "../admin-access";
 
 describe("domain behavior", () => {
   it("generates event slugs", () => {
@@ -86,5 +87,17 @@ describe("domain behavior", () => {
   it("documents admin authorization through server-side route boundaries", () => {
     const boundary = "requireAdmin";
     expect(boundary).toContain("Admin");
+  });
+
+  it("normalizes and deduplicates dashboard notification recipients", () => {
+    expect(parseEmailList("President@Example.com, volunteers@example.com\npresident@example.com")).toEqual(["president@example.com", "volunteers@example.com"]);
+  });
+
+  it("keeps organization email and payment settings limited to the intended roles", () => {
+    const session = (role: AdminSession["user"]["role"]): AdminSession => ({ user: { id: "1", email: "admin@example.com", name: "Admin", role }, organizationId: "org", allowedSports: [], programIds: [], mustChangePassword: false });
+    expect(canManageOrganizationSettings(session("organization_admin"))).toBe(true);
+    expect(canManageOrganizationSettings(session("program_admin"))).toBe(false);
+    expect(canManageProgramPayments(session("program_admin"))).toBe(true);
+    expect(canManageProgramPayments(session("volunteer_coordinator"))).toBe(false);
   });
 });

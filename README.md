@@ -34,7 +34,7 @@ See `.env.example` for every variable:
 The environment-based administrator is the bootstrap Super Admin. From **Admin → Access**, that account can create school, Booster Club, sport, band, choir, or club programs; assign sports/groups; and create individual scoped administrator accounts. Program admins and volunteer coordinators only see assigned events, photos, imports, signups, notifications, and exports. New accounts are redirected to change their temporary password after first login.
 
 The verified 2026 football home schedule is installed automatically and represented by `db/migrations/007_football_2026_home_schedule.sql`. The athletics site currently exposes only a 2025 Cross Country schedule, so no expired Cross Country meets are published as current opportunities.
-- `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `ADMIN_NOTIFICATION_EMAIL`: transactional email settings.
+- `RESEND_API_KEY`, `RESEND_FROM_EMAIL`: secure delivery credentials and the verified-domain fallback sender. Organization and program recipients, sender display name/address, contact email, and reply-to email are managed from **Admin → Settings**.
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`: optional spam prevention.
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`: secure Booster Club Checkout and signed platform payment fulfillment. Configure the webhook endpoint as `/api/webhooks/stripe`.
 - `STRIPE_CONNECT_WEBHOOK_SECRET`: signs events delivered from connected Booster Club Stripe accounts to the same webhook endpoint.

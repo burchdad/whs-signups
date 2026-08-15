@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import { sendCancellationEmails } from "@/lib/email/service";
 import { cancelSignupById, createAdminEvent, createVolunteerTemplate, getSignupContextById, listAdminEvents, saveSportPhoto, updateEventDetails, updateSlotState } from "@/lib/repository";
 import { participationAreas, sportsOffered, type SportName } from "@/lib/sports";
-import { adminRoles, canManage, canManageAdmins, canManageProgram, canManageProgramPayments, changeAdminPassword, createAdminAccount, createAdminProgram, getAssignableAdminOwner, hasSportAccess, updateAdminProgramBilling, updateProgramStripeAccount } from "@/lib/admin-access";
+import { adminRoles, canManage, canManageAdmins, canManageOrganizationSettings, canManageProgram, canManageProgramPayments, changeAdminPassword, createAdminAccount, createAdminProgram, getAssignableAdminOwner, hasSportAccess, parseEmailList, updateAdminProgramBilling, updateOrganizationEmailSettings, updateProgramNotificationEmails, updateProgramStripeAccount } from "@/lib/admin-access";
 import { adminNotificationRecipientsForSport } from "@/lib/admin-access";
 import { verifyConnectedStripeAccount } from "@/lib/stripe";
 
@@ -132,7 +132,7 @@ export async function addAdminProgram(formData: FormData) {
   if (!canManageAdmins(session)) throw new Error("Only the Super Admin can manage programs.");
   const sports = formData.getAll("sports").map(String).filter((sport) => participationAreas.includes(sport as (typeof participationAreas)[number]));
   const fee = Math.max(0, Math.round(Number(formData.get("membershipFee") ?? 0) * 100));
-  await createAdminProgram({ organizationId: session.organizationId, name: String(formData.get("name") ?? ""), type: String(formData.get("type") ?? "booster_club"), notificationEmail: String(formData.get("notificationEmail") ?? ""), sports, membershipFeeCents: fee, paymentRequired: String(formData.get("paymentRequired")) === "on", actorId: session.user.id });
+  await createAdminProgram({ organizationId: session.organizationId, name: String(formData.get("name") ?? ""), type: String(formData.get("type") ?? "booster_club"), notificationEmails: parseEmailList(String(formData.get("notificationEmail") ?? "")), sports, membershipFeeCents: fee, paymentRequired: String(formData.get("paymentRequired")) === "on", actorId: session.user.id });
   revalidatePath("/admin/access");
   redirect("/admin/access?program=created");
 }
@@ -180,4 +180,35 @@ export async function saveMyProgramStripeAccount(formData: FormData) {
   await updateProgramStripeAccount({ programId, stripeAccountId: account.id, chargesEnabled: account.chargesEnabled, actorId: session.user.id, organizationId: session.organizationId });
   revalidatePath("/admin/settings");
   redirect(`/admin/settings?stripe=${account.chargesEnabled ? "connected" : "pending"}`);
+}
+
+function isEmail(value: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value); }
+
+export async function saveOrganizationEmailSettings(formData: FormData) {
+  const session = await requireAdmin();
+  if (!canManageOrganizationSettings(session)) throw new Error("Only organization administrators can change organization email settings.");
+  const senderName = String(formData.get("senderName") ?? "").trim();
+  const senderAddress = String(formData.get("senderAddress") ?? "").trim().toLowerCase();
+  const contactEmail = String(formData.get("contactEmail") ?? "").trim().toLowerCase();
+  const replyToEmail = String(formData.get("replyToEmail") ?? "").trim().toLowerCase();
+  const defaultNotificationEmails = parseEmailList(String(formData.get("defaultNotificationEmails") ?? ""));
+  if (!senderName || !isEmail(senderAddress) || !isEmail(contactEmail) || !isEmail(replyToEmail) || defaultNotificationEmails.some((email) => !isEmail(email))) throw new Error("Enter valid organization email settings.");
+  const configuredFrom = process.env.RESEND_FROM_EMAIL || "WHSSignups <noreply@whssignups.com>";
+  const configuredAddress = configuredFrom.match(/<([^>]+)>/)?.[1] || configuredFrom;
+  const verifiedDomain = configuredAddress.split("@")[1]?.toLowerCase();
+  if (!verifiedDomain || senderAddress.split("@")[1] !== verifiedDomain) throw new Error(`Sender address must use the verified ${verifiedDomain || "email"} domain.`);
+  await updateOrganizationEmailSettings({ organizationId: session.organizationId, senderName, senderAddress, contactEmail, replyToEmail, defaultNotificationEmails, actorId: session.user.id });
+  revalidatePath("/admin/settings");
+  redirect("/admin/settings?email=organization");
+}
+
+export async function saveProgramNotificationEmails(formData: FormData) {
+  const session = await requireAdmin();
+  const programId = String(formData.get("programId") ?? "");
+  if (!canManage(session) || !(await canManageProgram(session, programId))) throw new Error("You cannot change notifications for that program.");
+  const notificationEmails = parseEmailList(String(formData.get("notificationEmails") ?? ""));
+  if (notificationEmails.some((email) => !isEmail(email))) throw new Error("Enter valid notification email addresses.");
+  await updateProgramNotificationEmails({ programId, notificationEmails, actorId: session.user.id, organizationId: session.organizationId });
+  revalidatePath("/admin/settings");
+  redirect("/admin/settings?email=program");
 }

@@ -33,6 +33,10 @@ export function ensureAdminAccessSchema() {
         alter table admin_programs add column if not exists stripe_account_id text;
         alter table admin_programs add column if not exists stripe_account_charges_enabled boolean not null default false;
         alter table admin_programs add column if not exists stripe_account_verified_at timestamptz;
+        alter table admin_programs add column if not exists notification_emails text[] not null default '{}';
+        alter table organizations add column if not exists email_sender_name text not null default 'WHSSignups';
+        alter table organizations add column if not exists email_sender_address text;
+        alter table organizations add column if not exists default_notification_emails text[] not null default '{}';
         alter table booster_club_signups add column if not exists program_id uuid references admin_programs(id) on delete restrict;
         alter table booster_club_signups add column if not exists program_name text;
         alter table booster_club_signups add column if not exists payment_status text not null default 'not_required';
@@ -44,6 +48,7 @@ export function ensureAdminAccessSchema() {
         create index if not exists booster_club_signups_program_idx on booster_club_signups (program_id, created_at desc);
         create unique index if not exists booster_club_signups_checkout_session_idx on booster_club_signups (stripe_checkout_session_id) where stripe_checkout_session_id is not null;
         create unique index if not exists admin_programs_stripe_account_unique on admin_programs (stripe_account_id) where stripe_account_id is not null;
+        update admin_programs set notification_emails=array[lower(notification_email)] where notification_email is not null and btrim(notification_email)<>'' and cardinality(notification_emails)=0;
       `);
     } finally {
       await client.query("select pg_advisory_unlock(hashtext('whssignups_admin_access'))").catch(() => undefined);
@@ -107,6 +112,10 @@ export function canManageAdmins(session: AdminSession) {
   return session.user.role === "super_admin";
 }
 
+export function canManageOrganizationSettings(session: AdminSession) {
+  return ["super_admin", "organization_admin"].includes(session.user.role);
+}
+
 export function hasSportAccess(session: AdminSession, sport: string) {
   return session.allowedSports === null || session.allowedSports.includes(sport);
 }
@@ -115,7 +124,7 @@ export async function listAdminPrograms() {
   await ensureAdminAccessSchema();
   if (!hasDatabaseUrl()) return [];
   const { rows } = await getPool().query(`select p.*, coalesce(array_agg(ps.sport_name order by ps.sport_name) filter (where ps.sport_name is not null), '{}') sports from admin_programs p left join admin_program_sports ps on ps.program_id = p.id group by p.id order by p.name`);
-  return rows.map((row) => ({ id: String(row.id), name: String(row.name), type: String(row.program_type), notificationEmail: row.notification_email ? String(row.notification_email) : "", sports: row.sports as string[], membershipFeeCents: Number(row.membership_fee_cents ?? 0), paymentRequired: Boolean(row.payment_required), stripePriceId: row.stripe_price_id ? String(row.stripe_price_id) : "", stripeAccountId: row.stripe_account_id ? String(row.stripe_account_id) : "", stripeChargesEnabled: Boolean(row.stripe_account_charges_enabled), stripeAccountVerifiedAt: row.stripe_account_verified_at ? new Date(String(row.stripe_account_verified_at)).toISOString() : undefined }));
+  return rows.map((row) => ({ id: String(row.id), name: String(row.name), type: String(row.program_type), notificationEmail: row.notification_email ? String(row.notification_email) : "", notificationEmails: Array.isArray(row.notification_emails) ? row.notification_emails.map(String) : [], sports: row.sports as string[], membershipFeeCents: Number(row.membership_fee_cents ?? 0), paymentRequired: Boolean(row.payment_required), stripePriceId: row.stripe_price_id ? String(row.stripe_price_id) : "", stripeAccountId: row.stripe_account_id ? String(row.stripe_account_id) : "", stripeChargesEnabled: Boolean(row.stripe_account_charges_enabled), stripeAccountVerifiedAt: row.stripe_account_verified_at ? new Date(String(row.stripe_account_verified_at)).toISOString() : undefined }));
 }
 
 export async function listAdminProgramsForSession(session: AdminSession) {
@@ -153,12 +162,13 @@ export async function getAssignableAdminOwner(session: AdminSession, targetId: s
   return (await listAssignableAdminAccounts(session)).find((account) => account.id === targetId);
 }
 
-export async function createAdminProgram(input: { organizationId: string; name: string; type: string; notificationEmail?: string; sports: string[]; membershipFeeCents?: number; paymentRequired?: boolean; actorId: string }) {
+export async function createAdminProgram(input: { organizationId: string; name: string; type: string; notificationEmails?: string[]; sports: string[]; membershipFeeCents?: number; paymentRequired?: boolean; actorId: string }) {
   await ensureAdminAccessSchema();
   const client = await getPool().connect();
   try {
     await client.query("begin");
-    const { rows } = await client.query("insert into admin_programs (organization_id, name, program_type, notification_email, membership_fee_cents, payment_required) values ($1,$2,$3,nullif($4,''),$5,$6) returning id", [input.organizationId, input.name.trim(), input.type, input.notificationEmail?.trim() || "", input.membershipFeeCents ?? 0, Boolean(input.paymentRequired && (input.membershipFeeCents ?? 0) > 0)]);
+    const notificationEmails = input.notificationEmails ?? [];
+    const { rows } = await client.query("insert into admin_programs (organization_id,name,program_type,notification_email,notification_emails,membership_fee_cents,payment_required) values ($1,$2,$3,$4,$5,$6,$7) returning id", [input.organizationId, input.name.trim(), input.type, notificationEmails[0] ?? null, notificationEmails, input.membershipFeeCents ?? 0, Boolean(input.paymentRequired && (input.membershipFeeCents ?? 0) > 0)]);
     const id = String(rows[0].id);
     for (const sport of input.sports) await client.query("insert into admin_program_sports (program_id, sport_name) values ($1,$2) on conflict do nothing", [id, sport]);
     await client.query("insert into audit_logs (organization_id, actor_user_id, action, entity_type, entity_id, metadata) values ($1,$2,'program.created','admin_program',$3,$4)", [input.organizationId, input.actorId, id, JSON.stringify({ name: input.name, sports: input.sports })]);
@@ -198,6 +208,35 @@ export async function updateProgramStripeAccount(input: { programId: string; str
   await getPool().query("insert into audit_logs (organization_id, actor_user_id, action, entity_type, entity_id, metadata) values ($1,$2,'program.stripe_account_updated','admin_program',$3,$4)", [input.organizationId, input.actorId, input.programId, JSON.stringify({ stripeAccountId: input.stripeAccountId || null, chargesEnabled: input.chargesEnabled })]);
 }
 
+export function parseEmailList(value: string) {
+  return [...new Set(value.split(/[;,\n]/).map((email) => email.trim().toLowerCase()).filter(Boolean))];
+}
+
+export async function getOrganizationEmailSettings(organizationId = "11111111-1111-4111-8111-111111111111") {
+  await ensureAdminAccessSchema();
+  const { rows } = await getPool().query("select email_sender_name,email_sender_address,default_notification_emails,contact_email,reply_to_email from organizations where id=$1", [organizationId]);
+  const row = rows[0] ?? {};
+  return {
+    senderName: String(row.email_sender_name || "WHSSignups"),
+    senderAddress: row.email_sender_address ? String(row.email_sender_address) : "",
+    defaultNotificationEmails: Array.isArray(row.default_notification_emails) ? row.default_notification_emails.map(String) : [],
+    contactEmail: row.contact_email ? String(row.contact_email) : "",
+    replyToEmail: row.reply_to_email ? String(row.reply_to_email) : "",
+  };
+}
+
+export async function updateOrganizationEmailSettings(input: { organizationId: string; senderName: string; senderAddress: string; defaultNotificationEmails: string[]; contactEmail: string; replyToEmail: string; actorId: string }) {
+  await ensureAdminAccessSchema();
+  await getPool().query("update organizations set email_sender_name=$2,email_sender_address=nullif($3,''),default_notification_emails=$4,contact_email=nullif($5,''),reply_to_email=nullif($6,''),updated_at=now() where id=$1", [input.organizationId, input.senderName.trim(), input.senderAddress.trim().toLowerCase(), input.defaultNotificationEmails, input.contactEmail.trim().toLowerCase(), input.replyToEmail.trim().toLowerCase()]);
+  await getPool().query("insert into audit_logs (organization_id,actor_user_id,action,entity_type,entity_id,metadata) values ($1,$2,'organization.email_settings_updated','organization',$1,$3)", [input.organizationId, input.actorId, JSON.stringify({ senderName: input.senderName, senderAddress: input.senderAddress, defaultNotificationEmails: input.defaultNotificationEmails })]);
+}
+
+export async function updateProgramNotificationEmails(input: { programId: string; notificationEmails: string[]; actorId: string; organizationId: string }) {
+  await ensureAdminAccessSchema();
+  await getPool().query("update admin_programs set notification_emails=$2,notification_email=$3 where id=$1 and organization_id=$4", [input.programId, input.notificationEmails, input.notificationEmails[0] ?? null, input.organizationId]);
+  await getPool().query("insert into audit_logs (organization_id,actor_user_id,action,entity_type,entity_id,metadata) values ($1,$2,'program.notification_emails_updated','admin_program',$3,$4)", [input.organizationId, input.actorId, input.programId, JSON.stringify({ notificationEmails: input.notificationEmails })]);
+}
+
 export async function adminNotificationRecipientsForProgram(programId: string) {
   if (!hasDatabaseUrl()) return [];
   await ensureAdminAccessSchema();
@@ -205,7 +244,9 @@ export async function adminNotificationRecipientsForProgram(programId: string) {
     select email from (
       select distinct u.email from admin_users u left join admin_program_memberships m on m.admin_user_id=u.id where u.is_active=true and (u.role in ('super_admin','organization_admin') or m.program_id=$1)
       union
-      select p.notification_email as email from admin_programs p where p.id=$1 and p.is_active=true and p.notification_email is not null
+      select unnest(p.notification_emails) as email from admin_programs p where p.id=$1 and p.is_active=true
+      union
+      select unnest(o.default_notification_emails) as email from organizations o join admin_programs p on p.organization_id=o.id where p.id=$1
     ) recipients
   `, [programId]);
   return rows.map((row) => String(row.email)).filter(Boolean);
@@ -236,7 +277,9 @@ export async function adminNotificationRecipientsForSport(sport: string) {
     select email from (
       select distinct u.email from admin_users u left join admin_program_memberships m on m.admin_user_id=u.id left join admin_program_sports ps on ps.program_id=m.program_id where u.is_active=true and (u.role in ('super_admin','organization_admin') or ps.sport_name=$1)
       union
-      select distinct p.notification_email as email from admin_programs p join admin_program_sports ps on ps.program_id=p.id where p.is_active=true and p.notification_email is not null and ps.sport_name=$1
+      select unnest(p.notification_emails) as email from admin_programs p join admin_program_sports ps on ps.program_id=p.id where p.is_active=true and ps.sport_name=$1
+      union
+      select unnest(o.default_notification_emails) as email from organizations o where exists (select 1 from admin_programs p join admin_program_sports ps on ps.program_id=p.id where p.organization_id=o.id and p.is_active=true and ps.sport_name=$1)
     ) recipients
   `, [sport]);
   return rows.map((row) => String(row.email)).filter(Boolean);
