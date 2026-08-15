@@ -30,6 +30,9 @@ export function ensureAdminAccessSchema() {
         alter table admin_programs add column if not exists membership_fee_cents integer not null default 0;
         alter table admin_programs add column if not exists payment_required boolean not null default false;
         alter table admin_programs add column if not exists stripe_price_id text;
+        alter table admin_programs add column if not exists stripe_account_id text;
+        alter table admin_programs add column if not exists stripe_account_charges_enabled boolean not null default false;
+        alter table admin_programs add column if not exists stripe_account_verified_at timestamptz;
         alter table booster_club_signups add column if not exists program_id uuid references admin_programs(id) on delete restrict;
         alter table booster_club_signups add column if not exists program_name text;
         alter table booster_club_signups add column if not exists payment_status text not null default 'not_required';
@@ -37,8 +40,10 @@ export function ensureAdminAccessSchema() {
         alter table booster_club_signups add column if not exists stripe_checkout_session_id text;
         alter table booster_club_signups add column if not exists stripe_payment_intent_id text;
         alter table booster_club_signups add column if not exists paid_at timestamptz;
+        alter table booster_club_signups add column if not exists stripe_account_id text;
         create index if not exists booster_club_signups_program_idx on booster_club_signups (program_id, created_at desc);
         create unique index if not exists booster_club_signups_checkout_session_idx on booster_club_signups (stripe_checkout_session_id) where stripe_checkout_session_id is not null;
+        create unique index if not exists admin_programs_stripe_account_unique on admin_programs (stripe_account_id) where stripe_account_id is not null;
       `);
     } finally {
       await client.query("select pg_advisory_unlock(hashtext('whssignups_admin_access'))").catch(() => undefined);
@@ -110,7 +115,12 @@ export async function listAdminPrograms() {
   await ensureAdminAccessSchema();
   if (!hasDatabaseUrl()) return [];
   const { rows } = await getPool().query(`select p.*, coalesce(array_agg(ps.sport_name order by ps.sport_name) filter (where ps.sport_name is not null), '{}') sports from admin_programs p left join admin_program_sports ps on ps.program_id = p.id group by p.id order by p.name`);
-  return rows.map((row) => ({ id: String(row.id), name: String(row.name), type: String(row.program_type), notificationEmail: row.notification_email ? String(row.notification_email) : "", sports: row.sports as string[], membershipFeeCents: Number(row.membership_fee_cents ?? 0), paymentRequired: Boolean(row.payment_required), stripePriceId: row.stripe_price_id ? String(row.stripe_price_id) : "" }));
+  return rows.map((row) => ({ id: String(row.id), name: String(row.name), type: String(row.program_type), notificationEmail: row.notification_email ? String(row.notification_email) : "", sports: row.sports as string[], membershipFeeCents: Number(row.membership_fee_cents ?? 0), paymentRequired: Boolean(row.payment_required), stripePriceId: row.stripe_price_id ? String(row.stripe_price_id) : "", stripeAccountId: row.stripe_account_id ? String(row.stripe_account_id) : "", stripeChargesEnabled: Boolean(row.stripe_account_charges_enabled), stripeAccountVerifiedAt: row.stripe_account_verified_at ? new Date(String(row.stripe_account_verified_at)).toISOString() : undefined }));
+}
+
+export async function listAdminProgramsForSession(session: AdminSession) {
+  const programs = await listAdminPrograms();
+  return session.allowedSports === null ? programs : programs.filter((program) => session.programIds.includes(program.id));
 }
 
 export async function listAdminAccounts() {
@@ -164,6 +174,28 @@ export async function updateAdminProgramBilling(input: { programId: string; memb
     [input.programId, input.membershipFeeCents, input.paymentRequired && input.membershipFeeCents > 0, input.stripePriceId?.trim() ?? "", input.organizationId],
   );
   await getPool().query("insert into audit_logs (organization_id, actor_user_id, action, entity_type, entity_id, metadata) values ($1,$2,'program.billing_updated','admin_program',$3,$4)", [input.organizationId, input.actorId, input.programId, JSON.stringify({ membershipFeeCents: input.membershipFeeCents, paymentRequired: input.paymentRequired })]);
+}
+
+export function canManageProgramPayments(session: AdminSession) {
+  return ["super_admin", "organization_admin", "program_admin"].includes(session.user.role);
+}
+
+export async function canManageProgram(session: AdminSession, programId: string) {
+  return session.allowedSports === null || session.programIds.includes(programId);
+}
+
+export async function updateProgramStripeAccount(input: { programId: string; stripeAccountId?: string; chargesEnabled: boolean; actorId: string; organizationId: string }) {
+  await ensureAdminAccessSchema();
+  try {
+    await getPool().query(
+      "update admin_programs set stripe_account_id=nullif($2,''), stripe_account_charges_enabled=$3, stripe_account_verified_at=case when nullif($2,'') is null then null else now() end where id=$1 and organization_id=$4",
+      [input.programId, input.stripeAccountId?.trim() ?? "", input.chargesEnabled, input.organizationId],
+    );
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") throw new Error("That Stripe account is already assigned to another program.");
+    throw error;
+  }
+  await getPool().query("insert into audit_logs (organization_id, actor_user_id, action, entity_type, entity_id, metadata) values ($1,$2,'program.stripe_account_updated','admin_program',$3,$4)", [input.organizationId, input.actorId, input.programId, JSON.stringify({ stripeAccountId: input.stripeAccountId || null, chargesEnabled: input.chargesEnabled })]);
 }
 
 export async function adminNotificationRecipientsForProgram(programId: string) {

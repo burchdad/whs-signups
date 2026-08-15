@@ -6,8 +6,9 @@ import { requireAdmin } from "@/lib/auth";
 import { sendCancellationEmails } from "@/lib/email/service";
 import { cancelSignupById, createAdminEvent, createVolunteerTemplate, getSignupContextById, listAdminEvents, saveSportPhoto, updateEventDetails, updateSlotState } from "@/lib/repository";
 import { participationAreas, sportsOffered, type SportName } from "@/lib/sports";
-import { adminRoles, canManage, canManageAdmins, changeAdminPassword, createAdminAccount, createAdminProgram, getAssignableAdminOwner, hasSportAccess, updateAdminProgramBilling } from "@/lib/admin-access";
+import { adminRoles, canManage, canManageAdmins, canManageProgram, canManageProgramPayments, changeAdminPassword, createAdminAccount, createAdminProgram, getAssignableAdminOwner, hasSportAccess, updateAdminProgramBilling, updateProgramStripeAccount } from "@/lib/admin-access";
 import { adminNotificationRecipientsForSport } from "@/lib/admin-access";
+import { verifyConnectedStripeAccount } from "@/lib/stripe";
 
 async function requireManager() {
   const session = await requireAdmin();
@@ -163,4 +164,20 @@ export async function updateMyPassword(formData: FormData) {
   if (next !== String(formData.get("confirmPassword") ?? "")) throw new Error("The new passwords do not match.");
   await changeAdminPassword({ userId: session.user.id, currentPassword: String(formData.get("currentPassword") ?? ""), newPassword: next });
   redirect("/admin/settings?password=changed");
+}
+
+export async function saveMyProgramStripeAccount(formData: FormData) {
+  const session = await requireAdmin();
+  const programId = String(formData.get("programId") ?? "");
+  if (!canManageProgramPayments(session) || !(await canManageProgram(session, programId))) throw new Error("You cannot change payment settings for that program.");
+  const requestedAccountId = String(formData.get("stripeAccountId") ?? "").trim();
+  if (!requestedAccountId) {
+    await updateProgramStripeAccount({ programId, stripeAccountId: undefined, chargesEnabled: false, actorId: session.user.id, organizationId: session.organizationId });
+    revalidatePath("/admin/settings");
+    redirect("/admin/settings?stripe=cleared");
+  }
+  const account = await verifyConnectedStripeAccount(requestedAccountId);
+  await updateProgramStripeAccount({ programId, stripeAccountId: account.id, chargesEnabled: account.chargesEnabled, actorId: session.user.id, organizationId: session.organizationId });
+  revalidatePath("/admin/settings");
+  redirect(`/admin/settings?stripe=${account.chargesEnabled ? "connected" : "pending"}`);
 }

@@ -327,8 +327,8 @@ async function ensureDefaultBoosterPrograms() {
 export async function listPublicBoosterPrograms(): Promise<BoosterProgram[]> {
   if (!hasDatabaseUrl()) return [];
   await ensureDefaultBoosterPrograms();
-  const { rows } = await getPool().query(`select p.id,p.name,p.membership_fee_cents,p.payment_required,coalesce(array_agg(ps.sport_name order by ps.sport_name) filter (where ps.sport_name is not null),'{}') sports from admin_programs p left join admin_program_sports ps on ps.program_id=p.id where p.program_type='booster_club' and p.is_active=true group by p.id order by p.name`);
-  return rows.map((row) => ({ id: String(row.id), name: String(row.name), sports: row.sports as string[], membershipFeeCents: Number(row.membership_fee_cents ?? 0), paymentRequired: Boolean(row.payment_required) }));
+  const { rows } = await getPool().query(`select p.id,p.name,p.membership_fee_cents,p.payment_required,p.stripe_account_id,p.stripe_account_charges_enabled,coalesce(array_agg(ps.sport_name order by ps.sport_name) filter (where ps.sport_name is not null),'{}') sports from admin_programs p left join admin_program_sports ps on ps.program_id=p.id where p.program_type='booster_club' and p.is_active=true group by p.id order by p.name`);
+  return rows.map((row) => ({ id: String(row.id), name: String(row.name), sports: row.sports as string[], membershipFeeCents: Number(row.membership_fee_cents ?? 0), paymentRequired: Boolean(row.payment_required), stripeAccountId: row.stripe_account_id ? String(row.stripe_account_id) : undefined, stripeChargesEnabled: Boolean(row.stripe_account_charges_enabled) }));
 }
 
 export async function updateEventDetails(input: { id: string; title: string; opponent?: string; eventDate: string; startsAt: string; location: string; description?: string; contactName?: string; contactEmail?: string }) {
@@ -517,10 +517,10 @@ export async function createBoosterClubSignup(input: BoosterClubSignupInput): Pr
       insert into booster_club_signups (
         organization_id, first_name, last_name, email, normalized_email, phone,
         program_id, program_name, selected_sports, gear_preference, open_to_volunteering, interested_in_sponsoring,
-        payment_status, payment_amount_cents
+        payment_status, payment_amount_cents, stripe_account_id
       )
       select
-        org.id, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+        org.id, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
       from org
       returning id
       `,
@@ -538,6 +538,7 @@ export async function createBoosterClubSignup(input: BoosterClubSignupInput): Pr
         input.interestedInSponsoring === "yes",
         paymentAmountCents > 0 ? "pending" : "not_required",
         paymentAmountCents,
+        program.stripeAccountId ?? null,
       ],
     );
     if (!rows[0]) return { ok: false, code: "not_ready", message: "Booster Club signups are not ready yet. Please try again soon." };
@@ -554,16 +555,16 @@ export async function attachBoosterCheckoutSession(signupId: string, sessionId: 
   await getPool().query("update booster_club_signups set stripe_checkout_session_id=$2, updated_at=now() where id=$1 and payment_status='pending'", [signupId, sessionId]);
 }
 
-export async function markBoosterPaymentPaid(input: { sessionId: string; paymentIntentId?: string }) {
+export async function markBoosterPaymentPaid(input: { sessionId: string; paymentIntentId?: string; stripeAccountId?: string }) {
   if (!hasDatabaseUrl()) return;
   await ensureAdminAccessSchema();
-  await getPool().query("update booster_club_signups set payment_status='paid', stripe_payment_intent_id=nullif($2,''), paid_at=coalesce(paid_at,now()), updated_at=now() where stripe_checkout_session_id=$1", [input.sessionId, input.paymentIntentId ?? ""]);
+  await getPool().query("update booster_club_signups set payment_status='paid', stripe_payment_intent_id=nullif($2,''), paid_at=coalesce(paid_at,now()), updated_at=now() where stripe_checkout_session_id=$1 and coalesce(stripe_account_id,'')=$3", [input.sessionId, input.paymentIntentId ?? "", input.stripeAccountId ?? ""]);
 }
 
-export async function markBoosterPaymentFailed(sessionId: string) {
+export async function markBoosterPaymentFailed(sessionId: string, stripeAccountId?: string) {
   if (!hasDatabaseUrl()) return;
   await ensureAdminAccessSchema();
-  await getPool().query("update booster_club_signups set payment_status='failed', updated_at=now() where stripe_checkout_session_id=$1 and payment_status='pending'", [sessionId]);
+  await getPool().query("update booster_club_signups set payment_status='failed', updated_at=now() where stripe_checkout_session_id=$1 and coalesce(stripe_account_id,'')=$2 and payment_status='pending'", [sessionId, stripeAccountId ?? ""]);
 }
 
 export async function getCancellationByToken(token: string) {
