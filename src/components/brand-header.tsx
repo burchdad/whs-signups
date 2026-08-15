@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { sportSlug, sportsOffered } from "@/lib/sports";
 
 export function BrandHeader() {
   return (
@@ -21,19 +20,7 @@ export function BrandHeader() {
           </div>
         </Link>
         <nav className="hidden items-center gap-1 text-sm font-black uppercase tracking-wide md:flex">
-          <details className="group relative">
-            <summary className="list-none px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white [&::-webkit-details-marker]:hidden">
-              Sports
-            </summary>
-            <div className="absolute left-0 top-full mt-3 grid w-[min(720px,calc(100vw-32px))] grid-cols-2 gap-x-10 rounded-sm border-t-4 border-[var(--gold)] bg-white p-6 text-[var(--maroon-dark)] shadow-2xl">
-              {sportsOffered.map((sport) => (
-                <Link key={sport} href={`/${sportSlug(sport)}`} className="flex min-h-11 items-center justify-between border-b border-[var(--border)] text-sm font-black uppercase hover:text-[var(--maroon)]">
-                  <span>{sport}</span>
-                  <span className="text-xs italic tracking-normal text-[var(--muted)]">Volunteer</span>
-                </Link>
-              ))}
-            </div>
-          </details>
+          <Link href="/sports" className="px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white">Sports</Link>
           <Link href="/events" className="px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white">Events</Link>
           <Link href="/booster-club" className="px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white">Booster Club</Link>
           <Link href="/contact" className="px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white">Contact</Link>
@@ -44,7 +31,8 @@ export function BrandHeader() {
             Menu
           </summary>
           <nav className="absolute right-0 top-full mt-3 grid w-56 rounded-sm border-t-4 border-[var(--gold)] bg-white p-2 text-sm font-black uppercase tracking-wide text-[var(--maroon-dark)] shadow-2xl">
-            <Link href="/events" className="min-h-11 border-b border-[var(--border)] px-3 py-3">Events &amp; sports</Link>
+            <Link href="/sports" className="min-h-11 border-b border-[var(--border)] px-3 py-3">Sports</Link>
+            <Link href="/events" className="min-h-11 border-b border-[var(--border)] px-3 py-3">Events</Link>
             <Link href="/booster-club" className="min-h-11 border-b border-[var(--border)] px-3 py-3">Booster Club</Link>
             <Link href="/contact" className="min-h-11 border-b border-[var(--border)] px-3 py-3">Contact</Link>
             <Link href="/admin" className="min-h-11 px-3 py-3">Admin</Link>
