@@ -19,13 +19,13 @@ export function AdminLoginForm() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: formData.get("email"), password: formData.get("password") }),
     });
+    const payload = await response.json().catch(() => ({}));
     setLoading(false);
     if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
       setError(payload.message ?? "Invalid admin credentials.");
       return;
     }
-    router.push("/admin");
+    router.push(payload.redirect || "/admin");
     router.refresh();
   }
 

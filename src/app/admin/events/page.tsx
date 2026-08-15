@@ -8,8 +8,8 @@ export const metadata = { title: "Manage Events" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminEventsPage() {
-  await requireAdmin();
-  const events = await listAdminEvents();
+  const session = await requireAdmin();
+  const events = await listAdminEvents(session.allowedSports);
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -17,7 +17,7 @@ export default async function AdminEventsPage() {
           <p className="eyebrow">Admin roster</p>
           <h1 className="text-3xl font-black uppercase text-[var(--ink)]">Events</h1>
         </div>
-        <Link href="/admin/events/new" className="min-h-11 rounded-sm bg-[var(--maroon)] px-4 py-2 font-black uppercase tracking-wide text-white hover:bg-[var(--maroon-dark)]">Create event</Link>
+        {session.user.role !== "roster_viewer" ? <Link href="/admin/events/new" className="min-h-11 rounded-sm bg-[var(--maroon)] px-4 py-2 font-black uppercase tracking-wide text-white hover:bg-[var(--maroon-dark)]">Create event</Link> : null}
       </div>
       <div className="wildcat-card mt-5 rounded-sm p-4">
         <input placeholder="Search by event, opponent, or location" className="field" />

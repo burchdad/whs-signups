@@ -16,15 +16,16 @@ export async function POST(request: Request) {
     );
   }
   const body = await request.json().catch(() => ({}));
-  if (!verifyAdminCredentials(String(body.email ?? ""), String(body.password ?? ""))) {
+  const session = await verifyAdminCredentials(String(body.email ?? ""), String(body.password ?? ""));
+  if (!session) {
     attempts.set(clientId, current && current.resetAt > now ? { ...current, count: current.count + 1 } : { count: 1, resetAt: now + WINDOW_MS });
     return NextResponse.json({ message: "Invalid admin credentials." }, { status: 401 });
   }
   try {
-    await createAdminSession();
+    await createAdminSession(session);
   } catch {
     return NextResponse.json({ message: "Admin authentication is not configured." }, { status: 503 });
   }
   attempts.delete(clientId);
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, redirect: session.mustChangePassword ? "/admin/settings" : "/admin" });
 }

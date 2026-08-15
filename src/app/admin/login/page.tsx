@@ -26,7 +26,7 @@ export default function AdminLoginPage() {
             </div>
           </div>
           <AdminLoginForm />
-          <p className="text-sm font-medium text-[var(--muted)]">Uses the configured admin email, password, and signed session cookie.</p>
+          <p className="text-sm font-medium text-[var(--muted)]">Use your individual administrator email and password. Access is limited to your assigned programs.</p>
         </div>
       </div>
     </section>

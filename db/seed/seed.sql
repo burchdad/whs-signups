@@ -13,3 +13,6 @@ on conflict do nothing;
 \ir ../migrations/002_replace_2026_home_games.sql
 \ir ../migrations/003_booster_club_signups.sql
 \ir ../migrations/004_booster_club_selected_sports.sql
+\ir ../migrations/005_notifications_media_and_flexible_roles.sql
+\ir ../migrations/006_multi_admin_access.sql
+\ir ../migrations/007_football_2026_home_schedule.sql
