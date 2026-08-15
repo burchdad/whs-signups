@@ -6,9 +6,8 @@ export function BrandHeader() {
   return (
     <header className="sticky top-0 z-30 border-b border-black/20 bg-[var(--ink)] text-white shadow-lg">
       <div className="bg-[var(--maroon-dark)]">
-        <div className="container flex min-h-8 items-center justify-between gap-3 text-xs font-black uppercase tracking-[0.16em] text-white/80">
+        <div className="container flex min-h-8 items-center text-xs font-black uppercase tracking-[0.16em] text-white/80">
           <span>The official volunteer hub of Whitehouse athletics</span>
-          <span className="hidden text-[var(--gold)] sm:inline">Wildcats Volleyball 2026</span>
         </div>
       </div>
       <div className="container flex min-h-20 items-center justify-between gap-4 py-3">
@@ -28,7 +27,7 @@ export function BrandHeader() {
             </summary>
             <div className="absolute left-0 top-full mt-3 grid w-[min(720px,calc(100vw-32px))] grid-cols-2 gap-x-10 rounded-sm border-t-4 border-[var(--gold)] bg-white p-6 text-[var(--maroon-dark)] shadow-2xl">
               {sportsOffered.map((sport) => (
-                <Link key={sport} href={`/sports/${sportSlug(sport)}`} className="flex min-h-11 items-center justify-between border-b border-[var(--border)] text-sm font-black uppercase hover:text-[var(--maroon)]">
+                <Link key={sport} href={`/${sportSlug(sport)}`} className="flex min-h-11 items-center justify-between border-b border-[var(--border)] text-sm font-black uppercase hover:text-[var(--maroon)]">
                   <span>{sport}</span>
                   <span className="text-xs italic tracking-normal text-[var(--muted)]">Volunteer</span>
                 </Link>
