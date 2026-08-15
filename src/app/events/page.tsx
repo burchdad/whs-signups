@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BrandHeader } from "@/components/brand-header";
 import { EventCard } from "@/components/event-card";
-import { eventOpenPositions } from "@/lib/availability";
+import { eventStatus } from "@/lib/availability";
 import { listPublicEvents } from "@/lib/repository";
 import { sportsOffered } from "@/lib/sports";
 
@@ -13,8 +13,8 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
   const filtered = events.filter((event) => {
     if (params.sport && event.sport !== params.sport) return false;
     if (params.type && event.eventType !== params.type) return false;
-    if (params.availability === "open" && eventOpenPositions(event) === 0) return false;
-    if (params.availability === "full" && eventOpenPositions(event) > 0) return false;
+    if (params.availability === "open" && eventStatus(event) !== "open") return false;
+    if (params.availability === "full" && eventStatus(event) !== "full") return false;
     if (params.when === "past") return new Date(event.startsAt) < new Date();
     return new Date(event.startsAt) >= new Date();
   });

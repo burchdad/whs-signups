@@ -19,7 +19,7 @@ export default function AdminLoginPage() {
         </div>
         <div className="wildcat-card grid gap-4 rounded-sm p-6 text-[var(--foreground)]">
           <div className="flex items-center gap-4 border-b border-[var(--border)] pb-4">
-            <Image src="/brand/whs-logo.png" alt="" width={76} height={62} />
+            <Image src="/brand/whs-logo.png" alt="" width={76} height={58} />
             <div>
               <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--maroon)]">Secure entry</p>
               <h2 className="text-2xl font-black uppercase">Admin login</h2>

@@ -18,7 +18,7 @@ export default async function BoosterClubPage({ searchParams }: { searchParams: 
           <div className="container grid gap-8 py-10 md:grid-cols-[0.85fr_1.15fr] md:items-center">
             <div className="wildcat-card rounded-sm p-6 text-[var(--foreground)]">
               <div className="flex items-center gap-4">
-                <Image src="/brand/whs-logo.png" alt="" width={82} height={68} />
+                <Image src="/brand/whs-logo.png" alt="" width={82} height={63} />
                 <div>
                   <p className="eyebrow">Wildcats Booster Club</p>
                   <h1 className="mt-1 text-4xl font-black uppercase leading-none text-[var(--ink)]">Join the support team</h1>

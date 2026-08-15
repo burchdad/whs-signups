@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BrandHeader } from "@/components/brand-header";
 import { isEventSignupOpen, isSlotAvailable, remainingCount } from "@/lib/availability";
-import { createIcs, googleCalendarUrl } from "@/lib/calendar";
 import { getPublicEventBySlug } from "@/lib/repository";
 import { formatDateTime } from "@/lib/utils";
 
@@ -74,7 +73,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
             ))}
           </div>
         </section>
-        {event.slots[0] ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Event", name: event.title, startDate: event.startsAt, location: event.location, url: `/events/${event.slug}`, description: event.description, calendar: createIcs(event, event.slots[0]), googleCalendar: googleCalendarUrl(event, event.slots[0]) }) }} /> : null}
+        {event.slots[0] ? <script id="event-structured-data" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "Event", name: event.title, startDate: event.startsAt, location: { "@type": "Place", name: event.location, address: event.address }, url: new URL(`/events/${event.slug}`, process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").toString(), description: event.description }) }} /> : null}
       </main>
     </>
   );

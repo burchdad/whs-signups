@@ -1,6 +1,10 @@
 import * as XLSX from "xlsx";
 import { slugify } from "../utils";
 
+const MAX_WORKSHEETS = 10;
+const MAX_ROWS_PER_WORKSHEET = 5_000;
+const MAX_COLUMNS_PER_WORKSHEET = 100;
+
 export type ColumnMapping = {
   date?: string;
   opponent?: string;
@@ -175,9 +179,12 @@ export function parseWorkbook(buffer: Buffer, filename: string) {
   }
   const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
   if (workbook.SheetNames.length === 0) throw new Error("Empty workbook.");
+  if (workbook.SheetNames.length > MAX_WORKSHEETS) throw new Error(`Workbooks may contain at most ${MAX_WORKSHEETS} worksheets.`);
   return workbook.SheetNames.map((sheetName) => {
     const worksheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, { defval: "" });
+    if (rows.length > MAX_ROWS_PER_WORKSHEET) throw new Error(`Each worksheet may contain at most ${MAX_ROWS_PER_WORKSHEET.toLocaleString()} rows.`);
+    if (Object.keys(rows[0] ?? {}).length > MAX_COLUMNS_PER_WORKSHEET) throw new Error(`Each worksheet may contain at most ${MAX_COLUMNS_PER_WORKSHEET} columns.`);
     return {
       sheetName,
       headers: Object.keys(rows[0] ?? {}),

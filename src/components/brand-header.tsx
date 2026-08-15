@@ -14,7 +14,7 @@ export function BrandHeader() {
       <div className="container flex min-h-20 items-center justify-between gap-4 py-3">
         <Link href="/" className="flex items-center gap-3">
           <span className="grid h-14 w-16 place-items-center rounded-sm bg-white">
-            <Image src="/brand/whs-logo.png" alt="Whitehouse Wildcats logo" width={58} height={48} priority />
+            <Image src="/brand/whs-logo.png" alt="Whitehouse Wildcats logo" width={58} height={44} priority />
           </span>
           <div>
             <p className="text-2xl font-black uppercase tracking-tight">WHSSignups</p>
@@ -40,6 +40,17 @@ export function BrandHeader() {
           <Link href="/contact" className="px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white">Contact</Link>
           <Link href="/admin" className="rounded-sm border border-[var(--gold)] px-3 py-2 text-[var(--gold)] hover:bg-[var(--gold)] hover:text-black">Admin</Link>
         </nav>
+        <details className="relative md:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center rounded-sm border border-[var(--gold)] px-4 text-sm font-black uppercase tracking-wide text-[var(--gold)] [&::-webkit-details-marker]:hidden">
+            Menu
+          </summary>
+          <nav className="absolute right-0 top-full mt-3 grid w-56 rounded-sm border-t-4 border-[var(--gold)] bg-white p-2 text-sm font-black uppercase tracking-wide text-[var(--maroon-dark)] shadow-2xl">
+            <Link href="/events" className="min-h-11 border-b border-[var(--border)] px-3 py-3">Events &amp; sports</Link>
+            <Link href="/booster-club" className="min-h-11 border-b border-[var(--border)] px-3 py-3">Booster Club</Link>
+            <Link href="/contact" className="min-h-11 border-b border-[var(--border)] px-3 py-3">Contact</Link>
+            <Link href="/admin" className="min-h-11 px-3 py-3">Admin</Link>
+          </nav>
+        </details>
       </div>
     </header>
   );

@@ -16,7 +16,7 @@ export default async function ConfirmationPage({ searchParams }: { searchParams:
         <div className="wildcat-card max-w-2xl rounded-sm p-6">
           <p className="eyebrow text-[var(--maroon)]">{waitlisted ? "Waitlisted" : "Confirmed"}</p>
           <h1 className="mt-2 text-3xl font-black uppercase text-[var(--ink)]">{waitlisted ? "You are on the waitlist." : "Thank you for volunteering."}</h1>
-          <p className="mt-3 font-medium text-[var(--muted)]">{waitlisted ? "That position is currently full. WHS will follow up if a spot opens." : "A confirmation email will be sent when email credentials are configured. In development, email details are logged safely to the console."}</p>
+          <p className="mt-3 font-medium text-[var(--muted)]">{waitlisted ? "That position is currently full. WHS will follow up if a spot opens." : "Your commitment is confirmed. Check your email for event details and your private cancellation link."}</p>
           {found ? (
             <div className="mt-5 flex flex-wrap gap-3">
               {!waitlisted ? <Link href={`/api/calendar/${found.event.id}/${found.slot.id}`} className="inline-flex min-h-11 items-center rounded-sm border border-[var(--border)] px-4 font-black uppercase tracking-wide">Download calendar file</Link> : null}

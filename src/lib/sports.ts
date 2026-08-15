@@ -1,11 +1,9 @@
 export const sportsOffered = [
   "Baseball",
-  "Baseball (Boys)",
   "Basketball (Boys)",
   "Basketball (Girls)",
   "Cheerleading (Girls)",
   "Cross Country (Coed)",
-  "Football (Boys)",
   "Football",
   "Soccer (Boys)",
   "Soccer (Girls)",
@@ -14,7 +12,6 @@ export const sportsOffered = [
   "Track and Field (Boys)",
   "Track and Field (Girls)",
   "Volleyball",
-  "Volleyball (Girls)",
 ] as const;
 
 export type SportName = (typeof sportsOffered)[number];
@@ -24,5 +21,10 @@ export function sportSlug(sport: string) {
 }
 
 export function sportFromSlug(slug: string) {
-  return sportsOffered.find((sport) => sportSlug(sport) === slug);
+  const aliases: Record<string, SportName> = {
+    "baseball-boys": "Baseball",
+    "football-boys": "Football",
+    "volleyball-girls": "Volleyball",
+  };
+  return aliases[slug] ?? sportsOffered.find((sport) => sportSlug(sport) === slug);
 }

@@ -5,11 +5,12 @@ import { BrandHeader } from "@/components/brand-header";
 import { EventCard } from "@/components/event-card";
 import { listPublicEvents } from "@/lib/repository";
 import { sportsOffered } from "@/lib/sports";
+import { isEventSignupOpen } from "@/lib/availability";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const upcomingEvents = (await listPublicEvents()).slice(0, 3);
+  const upcomingEvents = (await listPublicEvents()).filter((event) => isEventSignupOpen(event)).slice(0, 3);
   return (
     <>
       <BrandHeader />
@@ -51,7 +52,7 @@ export default async function Home() {
             </div>
             <div className="wildcat-card rounded-sm p-6 text-[var(--foreground)]">
               <div className="flex items-center gap-4 border-b border-[var(--border)] pb-4">
-                <Image src="/brand/whs-logo.png" alt="" width={76} height={62} />
+                <Image src="/brand/whs-logo.png" alt="" width={76} height={58} />
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--maroon)]">Volunteer roster</p>
                   <h2 className="text-2xl font-black uppercase">How it works</h2>
@@ -74,7 +75,11 @@ export default async function Home() {
             </div>
             <Link href="/events" className="font-black uppercase tracking-wide text-[var(--maroon)]">Full schedule</Link>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">{upcomingEvents.map((event) => <EventCard key={event.id} event={event} />)}</div>
+          {upcomingEvents.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-3">{upcomingEvents.map((event) => <EventCard key={event.id} event={event} />)}</div>
+          ) : (
+            <div className="wildcat-card rounded-sm p-6 font-medium text-[var(--muted)]">No volunteer events are currently open. Check the full schedule for newly published opportunities.</div>
+          )}
         </section>
       </main>
     </>

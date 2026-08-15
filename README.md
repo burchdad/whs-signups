@@ -29,7 +29,7 @@ See `.env.example` for every variable:
 - `NEXT_PUBLIC_APP_URL`: public app URL, usually `http://localhost:3000` locally and `https://whssignups.com` in production.
 - `DATABASE_URL`: Railway Postgres connection string.
 - `DATABASE_SSL`: defaults to SSL; set `false` only for local non-SSL Postgres.
-- `ADMIN_EMAIL`: MVP admin identity label until full auth is added.
+- `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`: required admin credentials and signing secret. Admin authentication fails closed when any value is missing.
 - `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `ADMIN_NOTIFICATION_EMAIL`: transactional email settings.
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`: optional spam prevention.
 
@@ -73,7 +73,7 @@ Local development skips Turnstile when `TURNSTILE_SECRET_KEY` is empty.
 
 ## Importing Schedules
 
-Upload `.xlsx`, `.xls`, or `.csv` files. The parser:
+Upload an `.xlsx`, `.xls`, or `.csv` file up to 5 MB. The admin-only parser:
 
 - Allows worksheet selection.
 - Normalizes common column names.
@@ -82,6 +82,7 @@ Upload `.xlsx`, `.xls`, or `.csv` files. The parser:
 - Detects likely home games from Home, Whitehouse, Whitehouse High School, and WHS.
 - Preserves every row.
 - Flags invalid rows, no-time warnings, and duplicate event candidates.
+- Rejects workbooks with more than 10 worksheets, 5,000 rows per worksheet, or 100 columns per worksheet.
 
 A sample file is available at `fixtures/sample-import.csv`.
 
@@ -120,5 +121,4 @@ Tests cover date parsing, time parsing, column normalization, home-game detectio
 - Admin create/edit buttons are UI-ready shells until Railway-backed write screens are expanded.
 - Import publishing is represented by parser/API/migration foundations; the final duplicate merge/skip UI needs a follow-up pass.
 - Email retry storage is designed through `email_logs` but retry UI is not implemented.
-- `npm audit --omit=dev` reports advisories in Next transitive `postcss`/`sharp` packages and SheetJS `xlsx`; npm currently suggests a breaking downgrade for the Next items and has no fix for `xlsx`, so review upstream releases before production launch.
 - SMS, payment, student accounts, recurring reminders, and multi-organization billing are intentionally out of scope for this MVP.
