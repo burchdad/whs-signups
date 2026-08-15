@@ -5,6 +5,7 @@ import { createToken, hashToken, verifyToken } from "./tokens";
 import type { AdminSignupRow, BoosterClubSignup, Signup, VolunteerEvent, VolunteerTemplate } from "./types";
 import { normalizeEmail, slugify } from "./utils";
 import type { BoosterClubSignupInput, SignupInput } from "./validation";
+import { sportPhotos, sportsOffered, type SportName } from "./sports";
 
 export async function listPublicEvents() {
   if (!hasDatabaseUrl()) return events.filter((event) => event.isPublished && !event.isArchived);
@@ -294,16 +295,16 @@ export async function listBoosterClubSignups(limit = 500): Promise<BoosterClubSi
   }
 }
 
-export async function updateEventDetails(input: { id: string; title: string; opponent?: string; eventDate: string; startsAt: string; location: string; description?: string }) {
+export async function updateEventDetails(input: { id: string; title: string; opponent?: string; eventDate: string; startsAt: string; location: string; description?: string; contactName?: string; contactEmail?: string }) {
   if (!hasDatabaseUrl()) return;
   await getPool().query(
     `
     update events
     set title = $2, opponent = nullif($3, ''), event_date = $4::date, starts_at = $5::timestamptz,
-        location = $6, description = nullif($7, ''), updated_at = now()
+        location = $6, description = nullif($7, ''), contact_name = nullif($8, ''), contact_email = nullif($9, ''), updated_at = now()
     where id = $1
     `,
-    [input.id, input.title.trim(), input.opponent?.trim() ?? "", input.eventDate, input.startsAt, input.location.trim(), input.description?.trim() ?? ""],
+    [input.id, input.title.trim(), input.opponent?.trim() ?? "", input.eventDate, input.startsAt, input.location.trim(), input.description?.trim() ?? "", input.contactName?.trim() ?? "", input.contactEmail?.trim().toLowerCase() ?? ""],
   );
 }
 
@@ -317,7 +318,86 @@ export async function cancelSignupById(id: string) {
   await getPool().query("update signups set status = 'cancelled', cancelled_at = now(), updated_at = now() where id = $1 and status in ('confirmed', 'waitlisted')", [id]);
 }
 
-export async function createAdminEvent(input: { title: string; sport: string; opponent?: string; eventDate: string; startsAt: string; location: string; description?: string }) {
+async function ensureSportMediaTable() {
+  if (!hasDatabaseUrl()) return;
+  const client = await getPool().connect();
+  try {
+    await client.query("select pg_advisory_lock(hashtext('whssignups_sport_media'))");
+    await client.query(`
+      create table if not exists sport_media (
+        id uuid primary key default gen_random_uuid(),
+        organization_id uuid not null references organizations(id) on delete cascade,
+        sport_name text not null,
+        label text not null default 'Team',
+        mime_type text not null check (mime_type in ('image/jpeg', 'image/png', 'image/webp')),
+        file_data bytea not null,
+        sort_order integer not null default 0,
+        uploaded_by text,
+        created_at timestamptz not null default now(),
+        updated_at timestamptz not null default now(),
+        unique (organization_id, sport_name, label)
+      )
+    `);
+  } finally {
+    await client.query("select pg_advisory_unlock(hashtext('whssignups_sport_media'))").catch(() => undefined);
+    client.release();
+  }
+}
+
+export async function getSportPhotoMap() {
+  const fallback = structuredClone(sportPhotos) as typeof sportPhotos;
+  if (!hasDatabaseUrl()) return fallback;
+  try {
+    await ensureSportMediaTable();
+    const { rows } = await getPool().query("select id, sport_name, label from sport_media order by sport_name, sort_order, created_at");
+    const managed: typeof sportPhotos = {};
+    for (const row of rows) {
+      const sport = sportsOffered.find((candidate) => candidate === String(row.sport_name));
+      if (!sport) continue;
+      (managed[sport] ??= []).push({ src: `/api/sports/media/${row.id}`, alt: `Whitehouse ${sport} ${String(row.label).toLowerCase()} team`, label: String(row.label) });
+    }
+    return { ...fallback, ...managed };
+  } catch (error) {
+    if (isMissingDatabaseSchema(error)) return fallback;
+    throw error;
+  }
+}
+
+export async function saveSportPhoto(input: { sport: SportName; label: string; mimeType: string; bytes: Buffer; uploadedBy: string }) {
+  if (!hasDatabaseUrl()) throw new Error("Database storage is not configured.");
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(input.mimeType)) throw new Error("Upload a JPEG, PNG, or WebP image.");
+  if (input.bytes.length > 5 * 1024 * 1024) throw new Error("Team photos must be 5 MB or smaller.");
+  await ensureSportMediaTable();
+  await getPool().query(
+    `insert into sport_media (organization_id, sport_name, label, mime_type, file_data, sort_order, uploaded_by)
+     values ($1,$2,$3,$4,$5,$6,$7)
+     on conflict (organization_id, sport_name, label) do update
+     set mime_type=excluded.mime_type, file_data=excluded.file_data, uploaded_by=excluded.uploaded_by, updated_at=now()`,
+    [organization.id, input.sport, input.label, input.mimeType, input.bytes, input.label === "Girls" ? 2 : 1, input.uploadedBy],
+  );
+}
+
+export async function getSportPhotoFile(id: string) {
+  if (!hasDatabaseUrl()) return undefined;
+  try {
+    await ensureSportMediaTable();
+    const { rows } = await getPool().query("select mime_type, file_data, updated_at from sport_media where id=$1 limit 1", [id]);
+    return rows[0] ? { mimeType: String(rows[0].mime_type), bytes: rows[0].file_data as Buffer, updatedAt: toIso(rows[0].updated_at) } : undefined;
+  } catch (error) {
+    if (isMissingDatabaseSchema(error)) return undefined;
+    throw error;
+  }
+}
+
+export async function getSignupContextById(id: string) {
+  const signup = (await listAdminSignups()).find((candidate) => candidate.id === id);
+  if (!signup) return undefined;
+  const event = (await listAdminEvents()).find((candidate) => candidate.id === signup.eventId);
+  const slot = event?.slots.find((candidate) => candidate.id === signup.slotId);
+  return event && slot ? { signup, event, slot } : undefined;
+}
+
+export async function createAdminEvent(input: { title: string; sport: string; opponent?: string; eventDate: string; startsAt: string; location: string; description?: string; contactName?: string; contactEmail?: string; templateId?: string; customSlots?: Array<{ name: string; category: string; capacity: number }>; schedule?: Array<{ label: string; startsAt: string }> }) {
   if (!hasDatabaseUrl()) return;
   await withTransaction(async (client) => {
     const orgId = "11111111-1111-4111-8111-111111111111";
@@ -331,8 +411,8 @@ export async function createAdminEvent(input: { title: string; sport: string; op
     );
     const event = await client.query(
       `
-      insert into events (organization_id, sport_id, season_id, title, slug, opponent, event_date, starts_at, location, description, is_published)
-      values ($1,$2,$3,$4,$5,$6,$7::date,$8::timestamptz,$9,$10,true)
+      insert into events (organization_id, sport_id, season_id, title, slug, opponent, event_date, starts_at, location, description, contact_name, contact_email, created_by, is_published)
+      values ($1,$2,$3,$4,$5,$6,$7::date,$8::timestamptz,$9,$10,$11,$12,$12,true)
       returning id
       `,
       [
@@ -346,15 +426,33 @@ export async function createAdminEvent(input: { title: string; sport: string; op
         input.startsAt,
         input.location.trim(),
         input.description?.trim() || null,
+        input.contactName?.trim() || null,
+        input.contactEmail?.trim().toLowerCase() || null,
       ],
     );
-    await client.query(
-      `
-      insert into volunteer_slots (event_id, name, category, capacity, sort_order)
-      values ($1, 'Student Volunteer', 'Student Volunteers', 6, 1), ($1, 'Adult Volunteer', 'Adult Volunteers', 2, 2)
-      `,
-      [event.rows[0].id],
-    );
+    const slots: Array<{ name: string; category: string; capacity: number }> = [];
+    for (const [index, item] of (input.schedule ?? []).entries()) {
+      await client.query("insert into event_schedule_items (event_id,label,starts_at,sort_order) values ($1,$2,$3,$4)", [event.rows[0].id, item.label, item.startsAt, index + 1]);
+    }
+    if (input.templateId) {
+      const templateSlots = await client.query("select name, category, default_capacity as capacity from volunteer_template_slots where template_id=$1 order by sort_order", [input.templateId]);
+      slots.push(...templateSlots.rows.map((row) => ({ name: String(row.name), category: String(row.category), capacity: Number(row.capacity) })));
+    }
+    slots.push(...(input.customSlots ?? []));
+    if (slots.length === 0) slots.push({ name: "General Volunteer", category: "Volunteers", capacity: 1 });
+    for (const [index, slot] of slots.entries()) {
+      await client.query("insert into volunteer_slots (event_id, name, category, capacity, sort_order) values ($1,$2,$3,$4,$5)", [event.rows[0].id, slot.name, slot.category, slot.capacity, index + 1]);
+    }
+  });
+}
+
+export async function createVolunteerTemplate(input: { name: string; description: string; slots: Array<{ name: string; category: string; capacity: number }> }) {
+  if (!hasDatabaseUrl()) return;
+  await withTransaction(async (client) => {
+    const { rows } = await client.query("insert into volunteer_templates (organization_id,name,description) values ($1,$2,$3) returning id", [organization.id, input.name.trim(), input.description.trim() || null]);
+    for (const [index, slot] of input.slots.entries()) {
+      await client.query("insert into volunteer_template_slots (template_id,name,category,default_capacity,sort_order) values ($1,$2,$3,$4,$5)", [rows[0].id, slot.name, slot.category, slot.capacity, index + 1]);
+    }
   });
 }
 
@@ -424,6 +522,41 @@ export async function getCancellationByToken(token: string) {
   const event = events.find((candidate) => candidate.id === signup.eventId);
   const slot = event?.slots.find((candidate) => candidate.id === signup.slotId);
   return event && slot ? { signup, event, slot } : undefined;
+}
+
+export async function listVolunteerReminders() {
+  if (!hasDatabaseUrl()) return [];
+  const { rows } = await getPool().query(`
+    select s.id
+    from signups s
+    join events e on e.id = s.event_id
+    join volunteer_slots vs on vs.id = s.slot_id
+    where s.status = 'confirmed'
+      and coalesce(vs.shift_start_at, e.starts_at) between now() + interval '20 hours' and now() + interval '28 hours'
+      and not exists (
+        select 1 from email_logs el
+        where el.signup_id = s.id and el.template = 'volunteer_reminder' and el.status = 'sent'
+      )
+    order by coalesce(vs.shift_start_at, e.starts_at)
+    limit 500
+  `);
+  const reminders: Array<{ signup: Signup; event: VolunteerEvent; slot: VolunteerEvent["slots"][number] }> = [];
+  for (const row of rows) {
+    const context = await getSignupContextById(String(row.id));
+    if (context) reminders.push(context);
+  }
+  return reminders;
+}
+
+export async function recordEmailDelivery(input: { signupId: string; recipient: string; template: string; status: "queued" | "sent" | "failed"; provider?: string; providerId?: string; error?: string }) {
+  if (!hasDatabaseUrl()) return;
+  await getPool().query(
+    `insert into email_logs (organization_id, signup_id, recipient, template, status, provider, provider_id, error_message)
+     select organization_id, id, $2, $3, $4, $5, $6, $7 from signups where id = $1
+     on conflict (signup_id, template, recipient) where signup_id is not null
+     do update set status = excluded.status, provider = excluded.provider, provider_id = excluded.provider_id, error_message = excluded.error_message, created_at = now()`,
+    [input.signupId, input.recipient, input.template, input.status, input.provider, input.providerId, input.error],
+  );
 }
 
 export async function cancelSignupByToken(token: string) {

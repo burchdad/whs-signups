@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { BrandHeader } from "@/components/brand-header";
 import { EventCard } from "@/components/event-card";
 import { SportPhoto } from "@/components/sport-photo";
-import { listPublicEvents } from "@/lib/repository";
-import { sportFromSlug, sportPhotos, sportSlug, sportsOffered } from "@/lib/sports";
+import { getSportPhotoMap, listPublicEvents } from "@/lib/repository";
+import { sportFromSlug, sportSlug, sportsOffered } from "@/lib/sports";
 
 export function generateStaticParams() {
   return sportsOffered.map((sport) => ({ sport: sportSlug(sport) }));
@@ -19,7 +19,8 @@ export default async function SportPage({ params }: { params: Promise<{ sport: s
   const sport = sportFromSlug((await params).sport);
   if (!sport) notFound();
   const now = new Date();
-  const events = (await listPublicEvents())
+  const [publicEvents, photoMap] = await Promise.all([listPublicEvents(), getSportPhotoMap()]);
+  const events = publicEvents
     .filter((event) => event.sport === sport && new Date(event.startsAt) >= now)
     .toSorted((left, right) => new Date(left.startsAt).getTime() - new Date(right.startsAt).getTime());
   return (
@@ -27,7 +28,7 @@ export default async function SportPage({ params }: { params: Promise<{ sport: s
       <BrandHeader />
       <main className="container py-8">
         <section className="overflow-hidden rounded-sm bg-[var(--maroon-dark)] text-white">
-          {sportPhotos[sport] && <SportPhoto images={sportPhotos[sport]} eager />}
+          {photoMap[sport] && <SportPhoto images={photoMap[sport]} eager />}
           <div className="athletic-band p-6 sm:p-8">
             <p className="eyebrow">Whitehouse Wildcats</p>
             <h1 className="mt-2 text-4xl font-black uppercase leading-none tracking-tight">{sport}</h1>
