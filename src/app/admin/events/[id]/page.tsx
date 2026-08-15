@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { saveEventDetails, setSlotOpen } from "../../actions";
 import { requireAdmin } from "@/lib/auth";
 import { listAdminEvents } from "@/lib/repository";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, isoToCentralLocalInput } from "@/lib/utils";
 
 export const metadata = { title: "Event Detail" };
 
@@ -11,7 +11,7 @@ export default async function AdminEventDetailPage({ params }: { params: Promise
   const { id } = await params;
   const event = (await listAdminEvents(session.allowedSports)).find((candidate) => candidate.id === id);
   if (!event) notFound();
-  const startsAtLocal = event.startsAt.slice(0, 16);
+  const startsAtLocal = isoToCentralLocalInput(event.startsAt);
   return (
     <>
       <p className="eyebrow">Event command</p>

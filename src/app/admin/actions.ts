@@ -9,6 +9,7 @@ import { participationAreas, sportsOffered, type SportName } from "@/lib/sports"
 import { adminRoles, canManage, canManageAdmins, canManageOrganizationSettings, canManageProgram, canManageProgramPayments, changeAdminPassword, createAdminAccount, createAdminProgram, getAssignableAdminOwner, hasSportAccess, parseEmailList, updateAdminProgramBilling, updateOrganizationEmailSettings, updateProgramNotificationEmails, updateProgramStripeAccount } from "@/lib/admin-access";
 import { adminNotificationRecipientsForSport } from "@/lib/admin-access";
 import { verifyConnectedStripeAccount } from "@/lib/stripe";
+import { centralLocalToIso } from "@/lib/utils";
 
 async function requireManager() {
   const session = await requireAdmin();
@@ -31,7 +32,7 @@ export async function saveEventDetails(formData: FormData) {
     title: String(formData.get("title") ?? ""),
     opponent: String(formData.get("opponent") ?? ""),
     eventDate: String(formData.get("eventDate") ?? ""),
-    startsAt: String(formData.get("startsAt") ?? ""),
+    startsAt: centralLocalToIso(String(formData.get("startsAt") ?? "")),
     location: String(formData.get("location") ?? ""),
     description: String(formData.get("description") ?? ""),
     contactName: String(formData.get("contactName") ?? ""),
@@ -74,7 +75,7 @@ export async function createEvent(formData: FormData) {
     sport,
     opponent: String(formData.get("opponent") ?? ""),
     eventDate: String(formData.get("eventDate") ?? ""),
-    startsAt: String(formData.get("startsAt") ?? ""),
+    startsAt: centralLocalToIso(String(formData.get("startsAt") ?? "")),
     location: String(formData.get("location") ?? ""),
     description: String(formData.get("description") ?? ""),
     contactName: ownerAdminUserId === session.user.id ? String(formData.get("contactName") ?? assignedOwner.name) : assignedOwner.name,

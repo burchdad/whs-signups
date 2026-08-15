@@ -4,7 +4,7 @@ import { verifyAdminCredentials } from "../auth";
 import { events, sampleSignups } from "../demo-data";
 import { boosterClubToCsv, signupsToCsv } from "../exports";
 import { hashToken, verifyToken } from "../tokens";
-import { slugify } from "../utils";
+import { centralLocalToIso, isoToCentralLocalInput, slugify } from "../utils";
 import { signupSchema } from "../validation";
 import { sportFromSlug, sportsOffered } from "../sports";
 import { canManageOrganizationSettings, canManageProgramPayments, parseEmailList, type AdminSession } from "../admin-access";
@@ -12,6 +12,12 @@ import { canManageOrganizationSettings, canManageProgramPayments, parseEmailList
 describe("domain behavior", () => {
   it("generates event slugs", () => {
     expect(slugify("Whitehouse vs Tyler Legacy 08/18/2026")).toBe("whitehouse-vs-tyler-legacy-08-18-2026");
+  });
+
+  it("treats admin event times as Central time across daylight saving time", () => {
+    expect(centralLocalToIso("2026-12-15T18:00")).toBe("2026-12-16T00:00:00.000Z");
+    expect(centralLocalToIso("2026-08-15T18:00")).toBe("2026-08-15T23:00:00.000Z");
+    expect(isoToCentralLocalInput("2026-12-16T00:00:00.000Z")).toBe("2026-12-15T18:00");
   });
 
   it("calculates slot availability", () => {
