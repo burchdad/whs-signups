@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminBoosterClubPage() {
   const session = await requireAdmin();
-  const signups = await listBoosterClubSignups(500, session.allowedSports);
+  const signups = await listBoosterClubSignups(500, session.allowedSports, session.allowedSports === null ? null : session.programIds);
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -22,16 +22,18 @@ export default async function AdminBoosterClubPage() {
           <table className="w-full min-w-[980px] text-left text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] text-xs font-black uppercase tracking-wide text-[var(--maroon-dark)]">
-                <th className="py-2">Name</th><th>Email</th><th>Phone</th><th>Sports</th><th>Item</th><th>Volunteer</th><th>Sponsor</th><th>Date</th>
+                <th className="py-2">Name</th><th>Booster Club</th><th>Email</th><th>Phone</th><th>Programs</th><th>Payment</th><th>Item</th><th>Volunteer</th><th>Sponsor</th><th>Date</th>
               </tr>
             </thead>
             <tbody>
               {signups.map((signup) => (
                 <tr key={signup.id} className="border-b border-[var(--border)] font-medium">
                   <td className="py-3 font-black text-[var(--ink)]">{signup.firstName} {signup.lastName}</td>
+                  <td className="font-black">{signup.programName}</td>
                   <td>{signup.email}</td>
                   <td>{signup.phone}</td>
                   <td>{signup.selectedSports.join(", ")}</td>
+                  <td className="uppercase">{signup.paymentStatus.replaceAll("_", " ")}{signup.paymentAmountCents > 0 ? ` · $${(signup.paymentAmountCents / 100).toFixed(2)}` : ""}</td>
                   <td className="capitalize">{signup.gearPreference}</td>
                   <td>{signup.openToVolunteering ? "Yes" : "No"}</td>
                   <td>{signup.interestedInSponsoring ? "Yes" : "No"}</td>

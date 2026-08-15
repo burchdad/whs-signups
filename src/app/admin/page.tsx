@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
   const session = await requireAdmin();
-  const metrics = await getAdminMetrics(session.allowedSports);
+  const metrics = await getAdminMetrics(session.allowedSports, session.allowedSports === null ? null : session.programIds);
   const cards = [
     ["Upcoming events", metrics.upcomingEvents, CalendarDays],
     ["Open positions", metrics.openPositions, ClipboardList],
@@ -20,7 +20,7 @@ export default async function AdminDashboard() {
   return (
     <>
       <div className="athletic-band rounded-sm p-6 text-white">
-        <p className="eyebrow">Whitehouse athletics</p>
+        <p className="eyebrow">Whitehouse community signups</p>
         <h1 className="mt-2 text-4xl font-black uppercase leading-none tracking-tight">Admin dashboard</h1>
         <p className="mt-3 font-medium text-white/82">Track upcoming home events, open volunteer positions, and roster activity for {session.allowedSports === null ? "all programs" : session.allowedSports.join(", ") || "your assigned programs"}.</p>
       </div>

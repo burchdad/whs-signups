@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { BrandHeader } from "@/components/brand-header";
+import { HeroCarousel } from "@/components/hero-carousel";
 import { eventOpenPositions, isEventSignupOpen } from "@/lib/availability";
 import { getSportPhotoMap, listPublicEvents } from "@/lib/repository";
 import { sportSlug, sportsOffered } from "@/lib/sports";
@@ -27,27 +28,20 @@ export default async function Home() {
   const activeSports = sportsOffered
     .map((sport) => ({ sport, count: events.filter((event) => event.sport === sport).length }))
     .sort((a, b) => b.count - a.count || a.sport.localeCompare(b.sport));
+  const heroImages = Object.values(photoMap).flat().filter((image): image is { src: string; alt: string; label?: string } => Boolean(image));
 
   return (
     <>
       <BrandHeader />
       <main>
         <section className="home-hero relative isolate overflow-hidden text-white">
-          <Image
-            src="/brand/wildcats-soccer-celebration.jpg"
-            alt="Whitehouse Wildcats soccer players celebrating together"
-            fill
-            priority
-            loading="eager"
-            sizes="100vw"
-            className="-z-20 object-cover object-[68%_45%]"
-          />
+          <HeroCarousel images={heroImages.length > 0 ? heroImages : [{ src: "/brand/wildcats-soccer-celebration.jpg", alt: "Whitehouse Wildcats students celebrating together" }]} />
           <div className="home-hero-overlay absolute inset-0 -z-10" />
           <div className="container flex min-h-[620px] items-center py-14 sm:min-h-[680px]">
             <div className="max-w-3xl">
-              <p className="eyebrow flex items-center gap-2"><Sparkles size={16} aria-hidden /> Whitehouse High School Athletics</p>
+              <p className="eyebrow flex items-center gap-2"><Sparkles size={16} aria-hidden /> Whitehouse community signups</p>
               <h1 className="mt-4 text-5xl font-black uppercase leading-[0.92] tracking-[-0.04em] sm:text-7xl lg:text-8xl">Show up for<br />the Wildcats.</h1>
-              <p className="mt-6 max-w-xl text-lg font-semibold leading-relaxed text-white/88 sm:text-xl">Every home event runs on people who care. Find a spot, lend a hand, and help make game day unforgettable.</p>
+              <p className="mt-6 max-w-xl text-lg font-semibold leading-relaxed text-white/88 sm:text-xl">Our teams, clubs, and student groups run on people who care. Find a spot, lend a hand, and make every event memorable.</p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link href="/events" className="inline-flex min-h-13 items-center gap-2 rounded-sm bg-[var(--gold)] px-6 font-black uppercase tracking-wide text-black transition hover:-translate-y-0.5 hover:bg-white">
                   Find an opportunity <ArrowRight size={19} aria-hidden />
@@ -57,7 +51,7 @@ export default async function Home() {
                 </Link>
               </div>
               <div className="mt-10 flex max-w-2xl flex-wrap gap-x-8 gap-y-4 border-t border-white/30 pt-6">
-                <ImpactStat value={sportsOffered.length} label="Wildcat sports" />
+                <ImpactStat value={sportsOffered.length} label="Wildcat programs" />
                 <ImpactStat value={events.length} label="Open events" />
                 <ImpactStat value={openPositions} label="Open positions" />
               </div>

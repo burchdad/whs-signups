@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import { sendCancellationEmails } from "@/lib/email/service";
 import { cancelSignupById, createAdminEvent, createVolunteerTemplate, getSignupContextById, listAdminEvents, saveSportPhoto, updateEventDetails, updateSlotState } from "@/lib/repository";
 import { participationAreas, sportsOffered, type SportName } from "@/lib/sports";
-import { adminRoles, canManage, canManageAdmins, changeAdminPassword, createAdminAccount, createAdminProgram, getAssignableAdminOwner, hasSportAccess } from "@/lib/admin-access";
+import { adminRoles, canManage, canManageAdmins, changeAdminPassword, createAdminAccount, createAdminProgram, getAssignableAdminOwner, hasSportAccess, updateAdminProgramBilling } from "@/lib/admin-access";
 import { adminNotificationRecipientsForSport } from "@/lib/admin-access";
 
 async function requireManager() {
@@ -130,9 +130,19 @@ export async function addAdminProgram(formData: FormData) {
   const session = await requireAdmin();
   if (!canManageAdmins(session)) throw new Error("Only the Super Admin can manage programs.");
   const sports = formData.getAll("sports").map(String).filter((sport) => participationAreas.includes(sport as (typeof participationAreas)[number]));
-  await createAdminProgram({ organizationId: session.organizationId, name: String(formData.get("name") ?? ""), type: String(formData.get("type") ?? "booster_club"), notificationEmail: String(formData.get("notificationEmail") ?? ""), sports, actorId: session.user.id });
+  const fee = Math.max(0, Math.round(Number(formData.get("membershipFee") ?? 0) * 100));
+  await createAdminProgram({ organizationId: session.organizationId, name: String(formData.get("name") ?? ""), type: String(formData.get("type") ?? "booster_club"), notificationEmail: String(formData.get("notificationEmail") ?? ""), sports, membershipFeeCents: fee, paymentRequired: String(formData.get("paymentRequired")) === "on", actorId: session.user.id });
   revalidatePath("/admin/access");
   redirect("/admin/access?program=created");
+}
+
+export async function saveProgramBilling(formData: FormData) {
+  const session = await requireAdmin();
+  if (!canManageAdmins(session)) throw new Error("Only the Super Admin can manage program payments.");
+  const membershipFeeCents = Math.max(0, Math.round(Number(formData.get("membershipFee") ?? 0) * 100));
+  await updateAdminProgramBilling({ programId: String(formData.get("programId") ?? ""), membershipFeeCents, paymentRequired: String(formData.get("paymentRequired")) === "on", actorId: session.user.id, organizationId: session.organizationId });
+  revalidatePath("/admin/access");
+  redirect("/admin/access?program=updated");
 }
 
 export async function addAdminAccount(formData: FormData) {

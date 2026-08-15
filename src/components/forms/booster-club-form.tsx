@@ -3,8 +3,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Script from "next/script";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { sportsOffered, type SportName } from "@/lib/sports";
+import { useForm, useWatch } from "react-hook-form";
+import type { BoosterProgram } from "@/lib/types";
 import { boosterClubSignupSchema, type BoosterClubSignupInput } from "@/lib/validation";
 
 declare global {
@@ -13,7 +13,7 @@ declare global {
   }
 }
 
-export function BoosterClubForm({ turnstileSiteKey, defaultSports = ["Volleyball"] }: { turnstileSiteKey?: string; defaultSports?: SportName[] }) {
+export function BoosterClubForm({ turnstileSiteKey, programs, defaultProgramId, defaultSports = [] }: { turnstileSiteKey?: string; programs: BoosterProgram[]; defaultProgramId?: string; defaultSports?: BoosterClubSignupInput["selectedSports"] }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [complete, setComplete] = useState(false);
   const {
@@ -21,17 +21,21 @@ export function BoosterClubForm({ turnstileSiteKey, defaultSports = ["Volleyball
     handleSubmit,
     reset,
     setValue,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<BoosterClubSignupInput>({
     resolver: zodResolver(boosterClubSignupSchema),
     defaultValues: {
       gearPreference: "shirt",
+      programId: defaultProgramId ?? programs[0]?.id,
       selectedSports: defaultSports,
       openToVolunteering: "yes",
       interestedInSponsoring: "no",
       consent: undefined,
     },
   });
+  const selectedProgramId = useWatch({ control, name: "programId" });
+  const selectedProgram = programs.find((program) => program.id === selectedProgramId) ?? programs[0];
 
   async function onSubmit(values: BoosterClubSignupInput) {
     setFormError(null);
@@ -48,11 +52,16 @@ export function BoosterClubForm({ turnstileSiteKey, defaultSports = ["Volleyball
     }
     reset({
       gearPreference: "shirt",
+      programId: defaultProgramId ?? programs[0]?.id,
       selectedSports: defaultSports,
       openToVolunteering: "yes",
       interestedInSponsoring: "no",
       consent: undefined,
     });
+    if (payload.checkoutUrl) {
+      window.location.assign(payload.checkoutUrl);
+      return;
+    }
     setComplete(true);
   }
 
@@ -77,8 +86,13 @@ export function BoosterClubForm({ turnstileSiteKey, defaultSports = ["Volleyball
         <Field label="Email" error={errors.email?.message}><input {...register("email")} type="email" autoComplete="email" className="field" /></Field>
         <Field label="Phone" error={errors.phone?.message}><input {...register("phone")} autoComplete="tel" className="field" /></Field>
       </div>
+      <Field label="Booster Club" error={errors.programId?.message}>
+        <select {...register("programId", { onChange: () => setValue("selectedSports", []) })} className="field font-semibold">
+          {programs.map((program) => <option key={program.id} value={program.id}>{program.name}{program.paymentRequired && program.membershipFeeCents > 0 ? ` — $${(program.membershipFeeCents / 100).toFixed(2)}` : ""}</option>)}
+        </select>
+      </Field>
       <fieldset className="grid gap-1.5">
-        <legend className="font-black uppercase tracking-wide text-[var(--ink)]">Sports you want to be part of</legend>
+        <legend className="font-black uppercase tracking-wide text-[var(--ink)]">Programs you want to support</legend>
         <details className="group rounded-sm border border-[var(--border)] bg-white">
           <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between px-3 font-semibold text-[var(--muted)] [&::-webkit-details-marker]:hidden">
             Select one or more sports
@@ -86,7 +100,7 @@ export function BoosterClubForm({ turnstileSiteKey, defaultSports = ["Volleyball
             <span className="hidden text-xs font-black uppercase tracking-wide text-[var(--maroon)] group-open:inline">Close</span>
           </summary>
           <div className="grid max-h-72 gap-2 overflow-y-auto border-t border-[var(--border)] p-3 sm:grid-cols-2">
-            {sportsOffered.map((sport) => (
+            {(selectedProgram?.sports ?? []).map((sport) => (
               <label key={sport} className="flex min-h-10 items-center gap-2 rounded-sm border border-[var(--border)] px-3 text-sm font-semibold hover:border-[var(--maroon)]">
                 <input type="checkbox" value={sport} {...register("selectedSports")} className="h-4 w-4 rounded border-[var(--border)]" />
                 <span>{sport}</span>
@@ -122,8 +136,9 @@ export function BoosterClubForm({ turnstileSiteKey, defaultSports = ["Volleyball
       </label>
       {errors.consent?.message ? <p className="text-sm font-medium text-[var(--maroon-dark)]">{errors.consent.message}</p> : null}
       {turnstileSiteKey ? <div className="cf-turnstile" data-sitekey={turnstileSiteKey} data-callback="onBoosterTurnstileSuccess" /> : null}
+      {selectedProgram?.paymentRequired && selectedProgram.membershipFeeCents > 0 ? <p className="rounded-sm bg-[var(--cream)] p-3 text-sm font-semibold text-[var(--muted)]">After submitting, you will continue to secure Stripe Checkout to pay the ${(selectedProgram.membershipFeeCents / 100).toFixed(2)} membership fee.</p> : null}
       <button disabled={isSubmitting} className="min-h-12 rounded-sm bg-[var(--maroon)] px-5 font-black uppercase tracking-wide text-white disabled:cursor-not-allowed disabled:opacity-60">
-        {isSubmitting ? "Submitting..." : "Join Booster Club"}
+        {isSubmitting ? "Submitting..." : selectedProgram?.paymentRequired ? "Continue to payment" : "Join Booster Club"}
       </button>
     </form>
   );

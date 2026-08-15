@@ -6,7 +6,7 @@ export function BrandHeader() {
     <header className="sticky top-0 z-30 border-b border-black/20 bg-[var(--ink)] text-white shadow-lg">
       <div className="bg-[var(--maroon-dark)]">
         <div className="container flex min-h-8 items-center text-xs font-black uppercase tracking-[0.16em] text-white/80">
-          <span>The official volunteer hub of Whitehouse athletics</span>
+          <span>The official signup hub for the Whitehouse community</span>
         </div>
       </div>
       <div className="container flex min-h-20 items-center justify-between gap-4 py-3">

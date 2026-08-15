@@ -64,13 +64,16 @@ export function adminSignupsToCsv(signups: AdminSignupRow[]) {
 }
 
 export function boosterClubToCsv(signups: BoosterClubSignup[]) {
-  const rows = [["Name", "Email", "Phone", "Sports", "Item", "Open To Volunteering", "Interested In Sponsoring", "Signup Date"]];
+  const rows = [["Name", "Booster Club", "Email", "Phone", "Programs", "Payment Status", "Payment Amount", "Item", "Open To Volunteering", "Interested In Sponsoring", "Signup Date"]];
   for (const signup of signups) {
     rows.push([
       `${signup.firstName} ${signup.lastName}`,
+      signup.programName,
       signup.email,
       signup.phone,
       signup.selectedSports.join("; "),
+      signup.paymentStatus,
+      (signup.paymentAmountCents / 100).toFixed(2),
       signup.gearPreference,
       signup.openToVolunteering ? "Yes" : "No",
       signup.interestedInSponsoring ? "Yes" : "No",

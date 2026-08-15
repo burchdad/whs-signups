@@ -16,3 +16,4 @@ on conflict do nothing;
 \ir ../migrations/005_notifications_media_and_flexible_roles.sql
 \ir ../migrations/006_multi_admin_access.sql
 \ir ../migrations/007_football_2026_home_schedule.sql
+\ir ../migrations/008_booster_program_payments.sql

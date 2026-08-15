@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { adminRoles, canManageAdmins, listAdminAccounts, listAdminPrograms } from "@/lib/admin-access";
 import { participationAreas } from "@/lib/sports";
-import { addAdminAccount, addAdminProgram } from "../actions";
+import { addAdminAccount, addAdminProgram, saveProgramBilling } from "../actions";
 
 export const metadata = { title: "Admin Access" };
 export const dynamic = "force-dynamic";
@@ -23,6 +23,7 @@ export default async function AccessPage({ searchParams }: { searchParams: Promi
         <form action={addAdminProgram} className="mt-4 grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-1"><span className="font-black uppercase">Name</span><input name="name" className="field" placeholder="Baseball Booster Club" required /></label><label className="grid gap-1"><span className="font-black uppercase">Type</span><select name="type" className="field"><option value="booster_club">Booster Club</option><option value="school">School-wide</option><option value="sport">Sport</option><option value="band">Band</option><option value="choir">Choir</option><option value="club">Club</option><option value="other">Other</option></select></label></div>
           <label className="grid gap-1"><span className="font-black uppercase">Notification email</span><input name="notificationEmail" type="email" className="field" /></label>
+          <div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-1"><span className="font-black uppercase">Membership fee</span><input name="membershipFee" type="number" min="0" step="0.01" defaultValue="0" className="field" /></label><label className="flex items-center gap-2 self-end rounded-sm border border-[var(--border)] p-3 font-black uppercase"><input name="paymentRequired" type="checkbox" /> Require Stripe payment</label></div>
           <fieldset><legend className="font-black uppercase">Sports or groups</legend><div className="mt-2 grid gap-2 sm:grid-cols-2">{participationAreas.map((sport) => <label key={sport} className="flex items-center gap-2 rounded-sm border border-[var(--border)] p-2 font-medium"><input type="checkbox" name="sports" value={sport} />{sport}</label>)}</div></fieldset>
           <button className="min-h-11 justify-self-start rounded-sm bg-[var(--maroon)] px-4 font-black uppercase text-white">Create program</button>
         </form>
@@ -37,6 +38,8 @@ export default async function AccessPage({ searchParams }: { searchParams: Promi
         </form>
       </section>
     </div>
+
+    <section className="wildcat-card mt-6 rounded-sm p-5"><h2 className="text-xl font-black uppercase text-[var(--ink)]">Booster Club payments</h2><p className="mt-1 text-sm font-medium text-[var(--muted)]">Set the membership amount for each Booster Club. Checkout starts only when payment is required.</p><div className="mt-4 grid gap-3 lg:grid-cols-2">{programs.filter((program) => program.type === "booster_club").map((program) => <form key={program.id} action={saveProgramBilling} className="grid gap-3 rounded-sm border border-[var(--border)] p-4"><input type="hidden" name="programId" value={program.id}/><strong className="uppercase text-[var(--ink)]">{program.name}</strong><label className="grid gap-1"><span className="text-sm font-black uppercase">Membership fee</span><input name="membershipFee" type="number" min="0" step="0.01" defaultValue={(program.membershipFeeCents / 100).toFixed(2)} className="field" /></label><label className="flex items-center gap-2 font-semibold"><input name="paymentRequired" type="checkbox" defaultChecked={program.paymentRequired}/> Require Stripe Checkout</label><button className="min-h-11 justify-self-start rounded-sm bg-[var(--maroon)] px-4 font-black uppercase text-white">Save payment settings</button></form>)}</div></section>
 
     <section className="wildcat-card mt-6 overflow-x-auto rounded-sm p-5"><h2 className="text-xl font-black uppercase text-[var(--ink)]">Current administrators</h2><table className="mt-4 w-full min-w-[700px] text-left text-sm"><thead><tr className="border-b border-[var(--border)] uppercase text-[var(--maroon-dark)]"><th className="py-2">Administrator</th><th>Role</th><th>Programs</th><th>Status</th></tr></thead><tbody>{accounts.map((account) => <tr key={account.id} className="border-b border-[var(--border)]"><td className="py-3"><strong className="block">{account.name}</strong>{account.email}</td><td className="uppercase">{account.role.replaceAll("_", " ")}</td><td>{account.programs.join(", ") || "School-wide"}</td><td>{account.active ? "Active" : "Disabled"}</td></tr>)}</tbody></table></section>
   </>;

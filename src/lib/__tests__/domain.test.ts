@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { eventOpenPositions, eventStatus, isEventSignupOpen, isSlotAvailable, remainingCount } from "../availability";
 import { verifyAdminCredentials } from "../auth";
 import { events, sampleSignups } from "../demo-data";
-import { signupsToCsv } from "../exports";
+import { boosterClubToCsv, signupsToCsv } from "../exports";
 import { hashToken, verifyToken } from "../tokens";
 import { slugify } from "../utils";
 import { signupSchema } from "../validation";
@@ -74,6 +74,13 @@ describe("domain behavior", () => {
     const csv = signupsToCsv(events, sampleSignups);
     expect(csv).toContain("Volunteer Position");
     expect(csv).toContain("Signup Date");
+  });
+
+  it("keeps Booster Club program and payment identity in exports", () => {
+    const csv = boosterClubToCsv([{ id: "signup-1", firstName: "Pat", lastName: "Parent", email: "pat@example.com", normalizedEmail: "pat@example.com", phone: "555-0111", programId: "program-1", programName: "Baseball Booster Club", selectedSports: ["Baseball"], gearPreference: "shirt", openToVolunteering: true, interestedInSponsoring: false, paymentStatus: "paid", paymentAmountCents: 2500, createdAt: "2026-08-15T12:00:00.000Z" }]);
+    expect(csv).toContain("Baseball Booster Club");
+    expect(csv).toContain("Payment Status");
+    expect(csv).toContain("25.00");
   });
 
   it("documents admin authorization through server-side route boundaries", () => {
