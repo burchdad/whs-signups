@@ -54,12 +54,12 @@ describe("domain behavior", () => {
     expect(eventOpenPositions({ ...events[0], slots }, new Date("2026-01-01T00:00:00.000Z"))).toBe(0);
   });
 
-  it("fails admin authentication closed when credentials are missing", () => {
+  it("fails admin authentication closed when credentials are missing", async () => {
     const previousEmail = process.env.ADMIN_EMAIL;
     const previousPassword = process.env.ADMIN_PASSWORD;
     delete process.env.ADMIN_EMAIL;
     delete process.env.ADMIN_PASSWORD;
-    expect(verifyAdminCredentials("admin@example.com", "anything")).toBe(false);
+    expect(await verifyAdminCredentials("admin@example.com", "anything")).toBeUndefined();
     if (previousEmail) process.env.ADMIN_EMAIL = previousEmail;
     if (previousPassword) process.env.ADMIN_PASSWORD = previousPassword;
   });

@@ -7,9 +7,9 @@ import { formatDateTime } from "@/lib/utils";
 export const metadata = { title: "Event Detail" };
 
 export default async function AdminEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const { id } = await params;
-  const event = (await listAdminEvents()).find((candidate) => candidate.id === id);
+  const event = (await listAdminEvents(session.allowedSports)).find((candidate) => candidate.id === id);
   if (!event) notFound();
   const startsAtLocal = event.startsAt.slice(0, 16);
   return (

@@ -7,8 +7,8 @@ export const metadata = { title: "Manage Signups" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminSignupsPage() {
-  await requireAdmin();
-  const signups = await listAdminSignups();
+  const session = await requireAdmin();
+  const signups = await listAdminSignups(200, session.allowedSports);
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -23,7 +23,7 @@ export default async function AdminSignupsPage() {
         <div className="mt-5 overflow-x-auto">
           <table className="w-full min-w-[860px] text-left text-sm">
             <thead><tr className="border-b border-[var(--border)] text-xs font-black uppercase tracking-wide text-[var(--maroon-dark)]"><th className="py-2">Volunteer</th><th>Event</th><th>Position</th><th>Email</th><th>Phone</th><th>Status</th><th>Date</th><th></th></tr></thead>
-            <tbody>{signups.map((signup) => <tr key={signup.id} className="border-b border-[var(--border)] font-medium"><td className="py-3 font-black text-[var(--ink)]">{signup.firstName} {signup.lastName}</td><td>{signup.eventTitle}</td><td>{signup.slotName}</td><td>{signup.email}</td><td>{signup.phone}</td><td>{signup.status}</td><td>{new Date(signup.createdAt).toLocaleDateString()}</td><td>{["confirmed", "waitlisted"].includes(signup.status) ? <form action={cancelSignup}><input type="hidden" name="signupId" value={signup.id} /><button className="font-black uppercase tracking-wide text-[var(--maroon)]">Cancel</button></form> : null}</td></tr>)}</tbody>
+            <tbody>{signups.map((signup) => <tr key={signup.id} className="border-b border-[var(--border)] font-medium"><td className="py-3 font-black text-[var(--ink)]">{signup.firstName} {signup.lastName}</td><td>{signup.eventTitle}</td><td>{signup.slotName}</td><td>{signup.email}</td><td>{signup.phone}</td><td>{signup.status}</td><td>{new Date(signup.createdAt).toLocaleDateString()}</td><td>{session.user.role !== "roster_viewer" && ["confirmed", "waitlisted"].includes(signup.status) ? <form action={cancelSignup}><input type="hidden" name="signupId" value={signup.id} /><button className="font-black uppercase tracking-wide text-[var(--maroon)]">Cancel</button></form> : null}</td></tr>)}</tbody>
           </table>
         </div>
       </section>

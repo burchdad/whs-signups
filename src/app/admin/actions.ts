@@ -4,12 +4,27 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { sendCancellationEmails } from "@/lib/email/service";
-import { cancelSignupById, createAdminEvent, createVolunteerTemplate, getSignupContextById, saveSportPhoto, updateEventDetails, updateSlotState } from "@/lib/repository";
-import { sportsOffered, type SportName } from "@/lib/sports";
+import { cancelSignupById, createAdminEvent, createVolunteerTemplate, getSignupContextById, listAdminEvents, saveSportPhoto, updateEventDetails, updateSlotState } from "@/lib/repository";
+import { participationAreas, sportsOffered, type SportName } from "@/lib/sports";
+import { adminRoles, canManage, canManageAdmins, changeAdminPassword, createAdminAccount, createAdminProgram, getAssignableAdminOwner, hasSportAccess } from "@/lib/admin-access";
+import { adminNotificationRecipientsForSport } from "@/lib/admin-access";
+
+async function requireManager() {
+  const session = await requireAdmin();
+  if (!canManage(session)) throw new Error("Your account has read-only roster access.");
+  return session;
+}
+
+async function requireEventAccess(eventId: string) {
+  const session = await requireManager();
+  const event = (await listAdminEvents(session.allowedSports)).find((item) => item.id === eventId);
+  if (!event) throw new Error("You do not have access to this event.");
+  return session;
+}
 
 export async function saveEventDetails(formData: FormData) {
-  await requireAdmin();
   const id = String(formData.get("id") ?? "");
+  await requireEventAccess(id);
   await updateEventDetails({
     id,
     title: String(formData.get("title") ?? ""),
@@ -27,8 +42,8 @@ export async function saveEventDetails(formData: FormData) {
 }
 
 export async function setSlotOpen(formData: FormData) {
-  await requireAdmin();
   const eventId = String(formData.get("eventId") ?? "");
+  await requireEventAccess(eventId);
   await updateSlotState({ slotId: String(formData.get("slotId") ?? ""), isOpen: String(formData.get("isOpen")) === "true" });
   revalidatePath("/admin");
   revalidatePath("/admin/events");
@@ -36,29 +51,39 @@ export async function setSlotOpen(formData: FormData) {
 }
 
 export async function cancelSignup(formData: FormData) {
-  await requireAdmin();
+  const session = await requireManager();
   const id = String(formData.get("signupId") ?? "");
-  const found = await getSignupContextById(id);
+  const found = await getSignupContextById(id, session.allowedSports);
+  if (!found) throw new Error("You do not have access to this signup.");
   await cancelSignupById(id);
-  if (found) await sendCancellationEmails(found);
+  if (found) await sendCancellationEmails({ ...found, notificationEmails: await adminNotificationRecipientsForSport(found.event.sport) });
   revalidatePath("/admin");
   revalidatePath("/admin/signups");
 }
 
 export async function createEvent(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireManager();
+  const sport = String(formData.get("sport") ?? "Volleyball");
+  if (!hasSportAccess(session, sport)) throw new Error("You do not have access to this sport.");
+  const ownerAdminUserId = String(formData.get("ownerAdminUserId") ?? session.user.id);
+  const assignedOwner = await getAssignableAdminOwner(session, ownerAdminUserId);
+  if (!assignedOwner) throw new Error("You cannot assign that form owner.");
   await createAdminEvent({
     title: String(formData.get("title") ?? ""),
-    sport: String(formData.get("sport") ?? "Volleyball"),
+    sport,
     opponent: String(formData.get("opponent") ?? ""),
     eventDate: String(formData.get("eventDate") ?? ""),
     startsAt: String(formData.get("startsAt") ?? ""),
     location: String(formData.get("location") ?? ""),
     description: String(formData.get("description") ?? ""),
-    contactName: String(formData.get("contactName") ?? ""),
-    contactEmail: String(formData.get("contactEmail") ?? session.user.email),
+    contactName: ownerAdminUserId === session.user.id ? String(formData.get("contactName") ?? assignedOwner.name) : assignedOwner.name,
+    contactEmail: ownerAdminUserId === session.user.id ? String(formData.get("contactEmail") ?? assignedOwner.email) : assignedOwner.email,
     templateId: String(formData.get("templateId") ?? "") || undefined,
     customSlots: parseRoleLines(String(formData.get("customRoles") ?? "")),
+    organizationId: session.organizationId,
+    programId: String(formData.get("programId") ?? "") || session.programIds[0],
+    ownerAdminUserId,
+    createdBy: session.user.email,
   });
   revalidatePath("/admin");
   revalidatePath("/admin/events");
@@ -66,7 +91,7 @@ export async function createEvent(formData: FormData) {
 }
 
 export async function createTemplate(formData: FormData) {
-  await requireAdmin();
+  await requireManager();
   const slots = parseRoleLines(String(formData.get("roles") ?? ""));
   if (slots.length === 0) throw new Error("Add at least one role to the template.");
   await createVolunteerTemplate({ name: String(formData.get("name") ?? ""), description: String(formData.get("description") ?? ""), slots });
@@ -85,9 +110,10 @@ function parseRoleLines(value: string) {
 }
 
 export async function uploadSportPhoto(formData: FormData) {
-  const session = await requireAdmin();
+  const session = await requireManager();
   const sport = String(formData.get("sport") ?? "");
   if (!sportsOffered.includes(sport as SportName)) throw new Error("Choose a valid sport.");
+  if (!hasSportAccess(session, sport)) throw new Error("You do not have access to this sport.");
   const file = formData.get("photo");
   if (!(file instanceof File) || file.size === 0) throw new Error("Choose a team photo.");
   const requestedLabel = String(formData.get("label") ?? "Team");
@@ -98,4 +124,33 @@ export async function uploadSportPhoto(formData: FormData) {
   revalidatePath(`/${sport.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`);
   revalidatePath("/admin/photos");
   redirect("/admin/photos?uploaded=1");
+}
+
+export async function addAdminProgram(formData: FormData) {
+  const session = await requireAdmin();
+  if (!canManageAdmins(session)) throw new Error("Only the Super Admin can manage programs.");
+  const sports = formData.getAll("sports").map(String).filter((sport) => participationAreas.includes(sport as (typeof participationAreas)[number]));
+  await createAdminProgram({ organizationId: session.organizationId, name: String(formData.get("name") ?? ""), type: String(formData.get("type") ?? "booster_club"), notificationEmail: String(formData.get("notificationEmail") ?? ""), sports, actorId: session.user.id });
+  revalidatePath("/admin/access");
+  redirect("/admin/access?program=created");
+}
+
+export async function addAdminAccount(formData: FormData) {
+  const session = await requireAdmin();
+  if (!canManageAdmins(session)) throw new Error("Only the Super Admin can manage accounts.");
+  const role = String(formData.get("role") ?? "volunteer_coordinator");
+  if (!adminRoles.includes(role as (typeof adminRoles)[number])) throw new Error("Choose a valid role.");
+  const password = String(formData.get("temporaryPassword") ?? "");
+  if (password.length < 12) throw new Error("Temporary passwords must contain at least 12 characters.");
+  await createAdminAccount({ organizationId: session.organizationId, name: String(formData.get("name") ?? ""), email: String(formData.get("email") ?? ""), password, role: role as (typeof adminRoles)[number], programIds: formData.getAll("programIds").map(String), actorId: session.user.id });
+  revalidatePath("/admin/access");
+  redirect("/admin/access?account=created");
+}
+
+export async function updateMyPassword(formData: FormData) {
+  const session = await requireAdmin();
+  const next = String(formData.get("newPassword") ?? "");
+  if (next !== String(formData.get("confirmPassword") ?? "")) throw new Error("The new passwords do not match.");
+  await changeAdminPassword({ userId: session.user.id, currentPassword: String(formData.get("currentPassword") ?? ""), newPassword: next });
+  redirect("/admin/settings?password=changed");
 }

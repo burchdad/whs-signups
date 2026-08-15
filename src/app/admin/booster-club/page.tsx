@@ -6,8 +6,8 @@ export const metadata = { title: "Booster Club Admin" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminBoosterClubPage() {
-  await requireAdmin();
-  const signups = await listBoosterClubSignups();
+  const session = await requireAdmin();
+  const signups = await listBoosterClubSignups(500, session.allowedSports);
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">

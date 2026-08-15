@@ -19,6 +19,10 @@ export const sportsOffered = [
 
 export type SportName = (typeof sportsOffered)[number];
 
+export const groupPrograms = ["Band", "Choir", "Other School Club"] as const;
+export const participationAreas = [...sportsOffered, ...groupPrograms] as const;
+export type ParticipationArea = (typeof participationAreas)[number];
+
 export function sportSlug(sport: string) {
   return sport.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }

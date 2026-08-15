@@ -30,6 +30,10 @@ See `.env.example` for every variable:
 - `DATABASE_URL`: Railway Postgres connection string.
 - `DATABASE_SSL`: defaults to SSL; set `false` only for local non-SSL Postgres.
 - `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`: required admin credentials and signing secret. Admin authentication fails closed when any value is missing.
+
+The environment-based administrator is the bootstrap Super Admin. From **Admin → Access**, that account can create school, Booster Club, sport, band, choir, or club programs; assign sports/groups; and create individual scoped administrator accounts. Program admins and volunteer coordinators only see assigned events, photos, imports, signups, notifications, and exports. New accounts are redirected to change their temporary password after first login.
+
+The verified 2026 football home schedule is installed automatically and represented by `db/migrations/007_football_2026_home_schedule.sql`. The athletics site currently exposes only a 2025 Cross Country schedule, so no expired Cross Country meets are published as current opportunities.
 - `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `ADMIN_NOTIFICATION_EMAIL`: transactional email settings.
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`: optional spam prevention.
 

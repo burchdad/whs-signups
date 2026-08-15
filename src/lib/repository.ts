@@ -6,10 +6,12 @@ import type { AdminSignupRow, BoosterClubSignup, Signup, VolunteerEvent, Volunte
 import { normalizeEmail, slugify } from "./utils";
 import type { BoosterClubSignupInput, SignupInput } from "./validation";
 import { sportPhotos, sportsOffered, type SportName } from "./sports";
+import { ensureKnownSchedules } from "./known-schedules";
 
 export async function listPublicEvents() {
   if (!hasDatabaseUrl()) return events.filter((event) => event.isPublished && !event.isArchived);
   try {
+    await ensureKnownSchedules();
     const { rows } = await getPool().query(`
     select
       e.*,
@@ -75,12 +77,13 @@ export async function getEventAndSlot(slotId: string) {
   return undefined;
 }
 
-export async function listAdminEvents() {
-  return listPublicEvents();
+export async function listAdminEvents(allowedSports: string[] | null = null) {
+  const allEvents = await listPublicEvents();
+  return allowedSports === null ? allEvents : allEvents.filter((event) => allowedSports.includes(event.sport));
 }
 
-export async function getAdminMetrics() {
-  const allEvents = await listAdminEvents();
+export async function getAdminMetrics(allowedSports: string[] | null = null) {
+  const allEvents = await listAdminEvents(allowedSports);
   const upcoming = allEvents.filter((event) => new Date(event.startsAt) > new Date());
   const baseMetrics = {
     upcomingEvents: upcoming.length,
@@ -96,22 +99,17 @@ export async function getAdminMetrics() {
   };
   if (hasDatabaseUrl()) {
     try {
-      const [eventSignupTotal, total, volunteer, sponsor, sports, recent] = await Promise.all([
-        getPool().query("select count(*)::int as count from signups"),
-        getPool().query("select count(*)::int as count from booster_club_signups"),
-        getPool().query("select count(*)::int as count from booster_club_signups where open_to_volunteering"),
-        getPool().query("select count(*)::int as count from booster_club_signups where interested_in_sponsoring"),
-        getPool().query("select sport, count(*)::int as count from booster_club_signups, unnest(selected_sports) sport group by sport order by count desc, sport asc limit 5"),
-        listAdminSignups(5),
-      ]);
+      const [allSignups, booster, recent] = await Promise.all([listAdminSignups(5000, allowedSports), listBoosterClubSignups(5000, allowedSports), listAdminSignups(5, allowedSports)]);
+      const sportCounts = new Map<string, number>();
+      for (const signup of booster) for (const sport of signup.selectedSports) if (allowedSports === null || allowedSports.includes(sport)) sportCounts.set(sport, (sportCounts.get(sport) ?? 0) + 1);
       return {
         ...baseMetrics,
-        totalSignups: eventSignupTotal.rows[0]?.count ?? recent.length,
+        totalSignups: allSignups.length,
         recentSignups: recent,
-        boosterSignups: total.rows[0]?.count ?? 0,
-        boosterVolunteerProspects: volunteer.rows[0]?.count ?? 0,
-        boosterSponsorProspects: sponsor.rows[0]?.count ?? 0,
-        topBoosterSports: sports.rows.map((row) => ({ sport: String(row.sport), count: Number(row.count) })),
+        boosterSignups: booster.length,
+        boosterVolunteerProspects: booster.filter((signup) => signup.openToVolunteering).length,
+        boosterSponsorProspects: booster.filter((signup) => signup.interestedInSponsoring).length,
+        topBoosterSports: [...sportCounts].map(([sport, count]) => ({ sport, count })).sort((a, b) => b.count - a.count).slice(0, 5),
       };
     } catch (error) {
       if (!isMissingDatabaseSchema(error)) throw error;
@@ -257,7 +255,7 @@ export async function createSignup(input: SignupInput): Promise<SignupResult> {
   };
 }
 
-export async function listAdminSignups(limit = 200): Promise<AdminSignupRow[]> {
+export async function listAdminSignups(limit = 200, allowedSports: string[] | null = null): Promise<AdminSignupRow[]> {
   if (!hasDatabaseUrl()) {
     return sampleSignups.slice(0, limit).map((signup) => {
       const event = events.find((candidate) => candidate.id === signup.eventId);
@@ -271,11 +269,13 @@ export async function listAdminSignups(limit = 200): Promise<AdminSignupRow[]> {
       select s.*, e.title as event_title, e.event_date, vs.name as slot_name
       from signups s
       join events e on e.id = s.event_id
+      left join sports sp on sp.id = e.sport_id
       join volunteer_slots vs on vs.id = s.slot_id
+      where ($2::text[] is null or sp.name = any($2::text[]))
       order by s.created_at desc
       limit $1
       `,
-      [limit],
+      [limit, allowedSports],
     );
     return rows.map((row) => ({ ...rowToSignup(row), eventTitle: String(row.event_title), eventDate: toDateOnly(row.event_date), slotName: String(row.slot_name) }));
   } catch (error) {
@@ -284,10 +284,10 @@ export async function listAdminSignups(limit = 200): Promise<AdminSignupRow[]> {
   }
 }
 
-export async function listBoosterClubSignups(limit = 500): Promise<BoosterClubSignup[]> {
+export async function listBoosterClubSignups(limit = 500, allowedSports: string[] | null = null): Promise<BoosterClubSignup[]> {
   if (!hasDatabaseUrl()) return [];
   try {
-    const { rows } = await getPool().query("select * from booster_club_signups order by created_at desc limit $1", [limit]);
+    const { rows } = await getPool().query("select * from booster_club_signups where ($2::text[] is null or selected_sports && $2::text[]) order by created_at desc limit $1", [limit, allowedSports]);
     return rows.map(rowToBoosterClubSignup);
   } catch (error) {
     if (isMissingDatabaseSchema(error)) return [];
@@ -389,18 +389,18 @@ export async function getSportPhotoFile(id: string) {
   }
 }
 
-export async function getSignupContextById(id: string) {
-  const signup = (await listAdminSignups()).find((candidate) => candidate.id === id);
+export async function getSignupContextById(id: string, allowedSports: string[] | null = null) {
+  const signup = (await listAdminSignups(5000, allowedSports)).find((candidate) => candidate.id === id);
   if (!signup) return undefined;
-  const event = (await listAdminEvents()).find((candidate) => candidate.id === signup.eventId);
+  const event = (await listAdminEvents(allowedSports)).find((candidate) => candidate.id === signup.eventId);
   const slot = event?.slots.find((candidate) => candidate.id === signup.slotId);
   return event && slot ? { signup, event, slot } : undefined;
 }
 
-export async function createAdminEvent(input: { title: string; sport: string; opponent?: string; eventDate: string; startsAt: string; location: string; description?: string; contactName?: string; contactEmail?: string; templateId?: string; customSlots?: Array<{ name: string; category: string; capacity: number }>; schedule?: Array<{ label: string; startsAt: string }> }) {
+export async function createAdminEvent(input: { title: string; sport: string; opponent?: string; eventDate: string; startsAt: string; location: string; description?: string; contactName?: string; contactEmail?: string; templateId?: string; customSlots?: Array<{ name: string; category: string; capacity: number }>; schedule?: Array<{ label: string; startsAt: string }>; organizationId?: string; programId?: string; ownerAdminUserId?: string; createdBy?: string }) {
   if (!hasDatabaseUrl()) return;
   await withTransaction(async (client) => {
-    const orgId = "11111111-1111-4111-8111-111111111111";
+    const orgId = input.organizationId || "11111111-1111-4111-8111-111111111111";
     const sport = await client.query(
       "insert into sports (organization_id, name) values ($1, $2) on conflict (organization_id, name) do update set name = excluded.name returning id",
       [orgId, input.sport],
@@ -411,8 +411,8 @@ export async function createAdminEvent(input: { title: string; sport: string; op
     );
     const event = await client.query(
       `
-      insert into events (organization_id, sport_id, season_id, title, slug, opponent, event_date, starts_at, location, description, contact_name, contact_email, created_by, is_published)
-      values ($1,$2,$3,$4,$5,$6,$7::date,$8::timestamptz,$9,$10,$11,$12,$12,true)
+      insert into events (organization_id, sport_id, season_id, title, slug, opponent, event_date, starts_at, location, description, contact_name, contact_email, created_by, admin_program_id, owner_admin_user_id, is_published)
+      values ($1,$2,$3,$4,$5,$6,$7::date,$8::timestamptz,$9,$10,$11,$12,$13,$14,$15,true)
       returning id
       `,
       [
@@ -428,6 +428,9 @@ export async function createAdminEvent(input: { title: string; sport: string; op
         input.description?.trim() || null,
         input.contactName?.trim() || null,
         input.contactEmail?.trim().toLowerCase() || null,
+        input.createdBy || input.contactEmail?.trim().toLowerCase() || null,
+        input.programId || null,
+        input.ownerAdminUserId === "bootstrap-super-admin" ? null : input.ownerAdminUserId || null,
       ],
     );
     const slots: Array<{ name: string; category: string; capacity: number }> = [];

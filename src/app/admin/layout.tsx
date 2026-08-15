@@ -1,5 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
+import { currentAdminSession } from "@/lib/auth";
+import { canManageAdmins } from "@/lib/admin-access";
 
 const nav = [
   ["/admin", "Dashboard"],
@@ -12,7 +14,9 @@ const nav = [
   ["/admin/settings", "Settings"],
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const session = await currentAdminSession();
+  const visibleNav = session && canManageAdmins(session) ? [...nav, ["/admin/access", "Access"]] : nav;
   return (
     <div className="min-h-screen bg-[var(--background)]">
       <header className="sticky top-0 z-30 border-b border-black/20 bg-[var(--ink)] text-white shadow-lg">
@@ -32,12 +36,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <span className="block text-xs font-black uppercase tracking-[0.18em] text-[var(--gold)]">Wildcats operations</span>
             </span>
           </Link>
-          <form action="/api/admin/logout" method="post">
+          <div className="flex items-center gap-3"><span className="hidden text-right text-xs font-bold text-white/70 sm:block">{session?.user.name}<br/><span className="uppercase text-[var(--gold)]">{session?.user.role.replaceAll("_", " ")}</span></span><form action="/api/admin/logout" method="post">
             <button className="rounded-sm border border-[var(--gold)] px-3 py-2 text-sm font-black uppercase tracking-wide text-[var(--gold)] hover:bg-[var(--gold)] hover:text-black">Logout</button>
-          </form>
+          </form></div>
         </div>
         <nav className="container flex gap-2 overflow-x-auto pb-3 text-sm font-black uppercase tracking-wide">
-          {nav.map(([href, label]) => <Link key={href} href={href} className="rounded-sm px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white">{label}</Link>)}
+          {visibleNav.map(([href, label]) => <Link key={href} href={href} className="rounded-sm px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white">{label}</Link>)}
         </nav>
       </header>
       <main className="container py-8">{children}</main>

@@ -3,6 +3,7 @@ import { sendBoosterClubEmails } from "@/lib/email/service";
 import { createBoosterClubSignup } from "@/lib/repository";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { boosterClubSignupSchema } from "@/lib/validation";
+import { adminNotificationRecipientsForSport } from "@/lib/admin-access";
 
 export async function POST(request: Request) {
   const parsed = boosterClubSignupSchema.safeParse(await request.json());
@@ -11,6 +12,7 @@ export async function POST(request: Request) {
   if (!challenge.ok) return NextResponse.json({ message: challenge.message }, { status: 400 });
   const result = await createBoosterClubSignup(parsed.data);
   if (!result.ok) return NextResponse.json({ message: result.message, code: result.code }, { status: result.code === "not_ready" ? 503 : 500 });
-  await sendBoosterClubEmails({ ...parsed.data, signupId: result.id });
+  const notificationEmails = [...new Set((await Promise.all(parsed.data.selectedSports.map(adminNotificationRecipientsForSport))).flat())];
+  await sendBoosterClubEmails({ ...parsed.data, signupId: result.id, notificationEmails });
   return NextResponse.json({ ok: true, id: result.id });
 }
