@@ -39,7 +39,7 @@ describe("domain behavior", () => {
       lastName: "Parent",
       email: "pat@example.com",
       phone: "555-0111",
-      consent: "on",
+      consent: true,
     });
     expect(parsed.success).toBe(true);
   });

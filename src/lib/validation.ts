@@ -9,7 +9,7 @@ export const signupSchema = z.object({
   phone: z.string().trim().min(7, "Enter a phone number.").max(40),
   studentName: z.string().trim().max(120).optional().or(z.literal("")),
   notes: z.string().trim().max(1000).optional().or(z.literal("")),
-  consent: z.literal("on", { error: "Please accept the volunteer signup terms." }),
+  consent: z.literal(true, { error: "Please accept the volunteer signup terms." }),
   turnstileToken: z.string().optional(),
 });
 
@@ -25,7 +25,7 @@ export const boosterClubSignupSchema = z.object({
   gearPreference: z.enum(["hat", "shirt"], { error: "Choose hat or shirt." }),
   openToVolunteering: z.enum(["yes", "no"], { error: "Choose whether you are open to volunteering." }),
   interestedInSponsoring: z.enum(["yes", "no"], { error: "Choose whether you are interested in sponsoring." }),
-  consent: z.literal("on", { error: "Please accept the Booster Club signup terms." }),
+  consent: z.literal(true, { error: "Please accept the Booster Club signup terms." }),
   turnstileToken: z.string().optional(),
 });
 
