@@ -106,4 +106,6 @@ export type BoosterProgram = {
   sports: string[];
   membershipFeeCents: number;
   paymentRequired: boolean;
+  stripeAccountId?: string;
+  stripeChargesEnabled: boolean;
 };

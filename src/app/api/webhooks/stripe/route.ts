@@ -15,9 +15,9 @@ export async function POST(request: Request) {
 
   if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
     const session = event.data.object as Stripe.Checkout.Session;
-    await markBoosterPaymentPaid({ sessionId: session.id, paymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id });
+    await markBoosterPaymentPaid({ sessionId: session.id, paymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id, stripeAccountId: event.account });
   } else if (event.type === "checkout.session.async_payment_failed" || event.type === "checkout.session.expired") {
-    await markBoosterPaymentFailed((event.data.object as Stripe.Checkout.Session).id);
+    await markBoosterPaymentFailed((event.data.object as Stripe.Checkout.Session).id, event.account);
   }
   return NextResponse.json({ received: true });
 }

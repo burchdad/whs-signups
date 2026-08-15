@@ -14,6 +14,7 @@ export async function POST(request: Request) {
   const requestedProgram = (await listPublicBoosterPrograms()).find((program) => program.id === parsed.data.programId);
   if (!requestedProgram) return NextResponse.json({ message: "Choose an active Booster Club." }, { status: 400 });
   if (requestedProgram.paymentRequired && (!isStripeConfigured() || requestedProgram.membershipFeeCents < 1)) return NextResponse.json({ message: "Online payment is not configured for this Booster Club yet. Please contact its administrator." }, { status: 503 });
+  if (requestedProgram.stripeAccountId && !requestedProgram.stripeChargesEnabled) return NextResponse.json({ message: "This Booster Club's Stripe account is connected but not ready to accept payments yet." }, { status: 503 });
   const result = await createBoosterClubSignup(parsed.data);
   if (!result.ok) return NextResponse.json({ message: result.message, code: result.code }, { status: result.code === "not_ready" ? 503 : 500 });
   const notificationEmails = await adminNotificationRecipientsForProgram(result.program.id);

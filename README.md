@@ -36,9 +36,12 @@ The environment-based administrator is the bootstrap Super Admin. From **Admin �
 The verified 2026 football home schedule is installed automatically and represented by `db/migrations/007_football_2026_home_schedule.sql`. The athletics site currently exposes only a 2025 Cross Country schedule, so no expired Cross Country meets are published as current opportunities.
 - `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `ADMIN_NOTIFICATION_EMAIL`: transactional email settings.
 - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY`: optional spam prevention.
-- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`: secure Booster Club Checkout and signed payment fulfillment. Configure the webhook endpoint as `/api/webhooks/stripe`.
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`: secure Booster Club Checkout and signed platform payment fulfillment. Configure the webhook endpoint as `/api/webhooks/stripe`.
+- `STRIPE_CONNECT_WEBHOOK_SECRET`: signs events delivered from connected Booster Club Stripe accounts to the same webhook endpoint.
 
-Each Booster Club is stored as a separate admin program. Public signups select a Booster Club before selecting its programs, and the program name, payment status, and amount are preserved in scoped admin views and CSV exports. Super Admins configure each club's membership fee and whether Stripe payment is required from **Admin → Access**.
+Each Booster Club is stored as a separate admin program. Public signups select a Booster Club before selecting its programs, and the program name, payment status, amount, and payment account are preserved in scoped admin views and CSV exports. Super Admins configure each club's membership fee and whether Stripe payment is required from **Admin → Access**.
+
+Super Admins, organization admins, and assigned program admins can configure their club's connected Stripe account from **Admin → Settings**. The application accepts only a Stripe account ID (`acct_...`), verifies it through the platform Stripe API, and never stores a club's secret key. A connected account can belong to only one program. Checkout uses direct charges for configured connected accounts, while programs without an account continue using the platform sandbox during initial testing.
 
 ## Railway Postgres Setup
 

@@ -30,13 +30,23 @@ export async function createBoosterCheckout(input: { signupId: string; program: 
     payment_intent_data: { metadata: { boosterSignupId: input.signupId, programId: input.program.id } },
     success_url: appUrl(`/booster-club/success?session_id={CHECKOUT_SESSION_ID}`),
     cancel_url: appUrl("/booster-club?checkout=cancelled"),
-  });
+  }, input.program.stripeAccountId ? { stripeAccount: input.program.stripeAccountId } : undefined);
   if (!session.url) throw new Error("Stripe did not return a Checkout URL.");
   return { id: session.id, url: session.url };
 }
 
+export async function verifyConnectedStripeAccount(accountId: string) {
+  if (!/^acct_[A-Za-z0-9]+$/.test(accountId)) throw new Error("Enter a valid Stripe account ID beginning with acct_.");
+  const account = await stripeClient().accounts.retrieve(accountId);
+  if (account.controller?.is_controller === false) throw new Error("That Stripe account is not connected to this platform.");
+  return { id: account.id, chargesEnabled: account.charges_enabled, detailsSubmitted: account.details_submitted };
+}
+
 export function constructStripeEvent(body: string, signature: string) {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!secret) throw new Error("Stripe webhook verification is not configured.");
-  return stripeClient().webhooks.constructEvent(body, signature, secret);
+  const secrets = [process.env.STRIPE_WEBHOOK_SECRET, process.env.STRIPE_CONNECT_WEBHOOK_SECRET].filter((secret): secret is string => Boolean(secret));
+  if (secrets.length === 0) throw new Error("Stripe webhook verification is not configured.");
+  for (const secret of secrets) {
+    try { return stripeClient().webhooks.constructEvent(body, signature, secret); } catch { /* Try the other signed endpoint. */ }
+  }
+  throw new Error("Invalid Stripe signature.");
 }
