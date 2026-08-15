@@ -1,16 +1,21 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, CheckCircle2, HandHeart, Shirt, Trophy } from "lucide-react";
+import { redirect } from "next/navigation";
 import { BrandHeader } from "@/components/brand-header";
-import { EventCard } from "@/components/event-card";
-import { listPublicEvents } from "@/lib/repository";
-import { sportsOffered } from "@/lib/sports";
-import { isEventSignupOpen } from "@/lib/availability";
+import { sportSlug, sportsOffered } from "@/lib/sports";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
-  const upcomingEvents = (await listPublicEvents()).filter((event) => isEventSignupOpen(event)).slice(0, 3);
+async function openSport(formData: FormData) {
+  "use server";
+  const selectedSport = String(formData.get("sport") ?? "");
+  const sport = sportsOffered.find((candidate) => candidate === selectedSport);
+  if (!sport) redirect("/");
+  redirect(`/${sportSlug(sport)}`);
+}
+
+export default function Home() {
   return (
     <>
       <BrandHeader />
@@ -41,9 +46,10 @@ export default async function Home() {
                     <Shirt size={17} aria-hidden /> Booster Club
                   </Link>
                 </div>
-                <form action="/events" className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+                <form action={openSport} className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
                   <label className="sr-only" htmlFor="home-sport">Choose sport</label>
-                  <select id="home-sport" name="sport" defaultValue="Volleyball" className="min-h-12 rounded-sm border border-white/20 bg-white px-3 font-black uppercase tracking-wide text-[var(--ink)]">
+                  <select id="home-sport" name="sport" defaultValue="" required className="min-h-12 rounded-sm border border-white/20 bg-white px-3 font-black uppercase tracking-wide text-[var(--ink)]">
+                    <option value="" disabled>Choose a sport</option>
                     {sportsOffered.map((sport) => <option key={sport} value={sport}>{sport}</option>)}
                   </select>
                   <button className="min-h-12 rounded-sm bg-[var(--gold)] px-5 font-black uppercase tracking-wide text-black hover:bg-white">Find signups</button>
@@ -70,16 +76,18 @@ export default async function Home() {
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
               <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-[var(--maroon)]"><Trophy size={16} aria-hidden /> Wildcats schedule</p>
-              <h2 className="mt-1 text-3xl font-black uppercase text-[var(--ink)]">Upcoming events</h2>
-              <p className="font-medium text-[var(--muted)]">Open volunteer opportunities for WHS volleyball.</p>
+              <h2 className="mt-1 text-3xl font-black uppercase text-[var(--ink)]">Choose your sport</h2>
+              <p className="font-medium text-[var(--muted)]">Open a dedicated team page for volunteer events and Booster Club opportunities.</p>
             </div>
             <Link href="/events" className="font-black uppercase tracking-wide text-[var(--maroon)]">Full schedule</Link>
           </div>
-          {upcomingEvents.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-3">{upcomingEvents.map((event) => <EventCard key={event.id} event={event} />)}</div>
-          ) : (
-            <div className="wildcat-card rounded-sm p-6 font-medium text-[var(--muted)]">No volunteer events are currently open. Check the full schedule for newly published opportunities.</div>
-          )}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {sportsOffered.map((sport) => (
+              <Link key={sport} href={`/${sportSlug(sport)}`} className="wildcat-card flex min-h-20 items-center justify-between rounded-sm p-4 font-black uppercase text-[var(--ink)] hover:border-[var(--gold)] hover:text-[var(--maroon)]">
+                <span>{sport}</span><ArrowRight size={18} aria-hidden />
+              </Link>
+            ))}
+          </div>
         </section>
       </main>
     </>
