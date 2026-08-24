@@ -4,10 +4,10 @@ import { BrandHeader } from "@/components/brand-header";
 import { EventCard } from "@/components/event-card";
 import { SportPhoto } from "@/components/sport-photo";
 import { getSportPhotoMap, listPublicEvents } from "@/lib/repository";
-import { sportFromSlug, sportSlug, sportsOffered } from "@/lib/sports";
+import { publicSportsOffered, sportFromSlug, sportSlug } from "@/lib/sports";
 
 export function generateStaticParams() {
-  return sportsOffered.map((sport) => ({ sport: sportSlug(sport) }));
+  return publicSportsOffered.map((sport) => ({ sport: sportSlug(sport) }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ sport: string }> }) {

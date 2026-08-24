@@ -78,16 +78,20 @@ export const events: VolunteerEvent[] = eventSeeds.map((seed, index) => {
       { id: scheduleId(index, 3), label: "Varsity", startsAt: centralIso(seed.date, seed.varsity), sortOrder: 3 },
     ],
     slots: [
-      { id: slotId(index, 1), eventId, name: "Student Volunteer", category: "Student Volunteers", shiftStart: centralIso(seed.date, seed.start), shiftEnd: centralIso(seed.date, seed.end), capacity: 6, filled: 0, isOpen: true, isVisible: true, sortOrder: 1 },
-      { id: slotId(index, 2), eventId, name: "Adult Volunteer", category: "Adult Volunteers", shiftStart: centralIso(seed.date, seed.start), shiftEnd: centralIso(seed.date, seed.end), capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 2 },
+      { id: slotId(index, 1), eventId, name: "Student Volunteer - 9th Grade", category: "Student Volunteers", shiftStart: centralIso(seed.date, seed.ninth, -30), shiftEnd: centralIso(seed.date, seed.ninth, 60), capacity: 6, filled: 0, isOpen: true, isVisible: true, sortOrder: 1, instructions: "Student shift begins 30 minutes before the listed game time and runs 1.5 hours." },
+      { id: slotId(index, 2), eventId, name: "Student Volunteer - JV", category: "Student Volunteers", shiftStart: centralIso(seed.date, seed.jv, -30), shiftEnd: centralIso(seed.date, seed.jv, 60), capacity: 6, filled: 0, isOpen: true, isVisible: true, sortOrder: 2, instructions: "Student shift begins 30 minutes before the listed game time and runs 1.5 hours." },
+      { id: slotId(index, 3), eventId, name: "Student Volunteer - Varsity", category: "Student Volunteers", shiftStart: centralIso(seed.date, seed.varsity, -30), shiftEnd: centralIso(seed.date, seed.varsity, 60), capacity: 6, filled: 0, isOpen: true, isVisible: true, sortOrder: 3, instructions: "Student shift begins 30 minutes before the listed game time and runs 1.5 hours." },
+      { id: slotId(index, 9), eventId, name: "Adult Volunteer", category: "Adult Volunteers", shiftStart: centralIso(seed.date, seed.start), shiftEnd: centralIso(seed.date, seed.end), capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 100 },
     ],
   };
 });
 
 export const sampleSignups: Signup[] = [];
 
-function centralIso(date: string, time: string) {
-  return new Date(`${date}T${time}:00-05:00`).toISOString();
+function centralIso(date: string, time: string, offsetMinutes = 0) {
+  const value = new Date(`${date}T${time}:00-05:00`);
+  value.setMinutes(value.getMinutes() + offsetMinutes);
+  return value.toISOString();
 }
 
 function scheduleId(eventIndex: number, order: number) {

@@ -4,13 +4,14 @@ import { events, organization, sampleSignups, templates } from "./demo-data";
 import { createToken, hashToken, verifyToken } from "./tokens";
 import type { AdminSignupRow, BoosterClubSignup, BoosterProgram, Signup, VolunteerEvent, VolunteerTemplate } from "./types";
 import { normalizeEmail, slugify } from "./utils";
+import { isPublicSport } from "./sports";
 import type { BoosterClubSignupInput, SignupInput } from "./validation";
 import { sportPhotos, sportsOffered, type SportName } from "./sports";
 import { ensureKnownSchedules } from "./known-schedules";
 import { ensureAdminAccessSchema } from "./admin-access";
 
 export async function listPublicEvents() {
-  if (!hasDatabaseUrl()) return events.filter((event) => event.isPublished && !event.isArchived);
+  if (!hasDatabaseUrl()) return events.filter((event) => event.isPublished && !event.isArchived && isPublicSport(event.sport));
   try {
     await ensureKnownSchedules();
     const { rows } = await getPool().query(`
@@ -57,9 +58,9 @@ export async function listPublicEvents() {
     group by e.id, sp.name, se.name
     order by e.starts_at asc
     `);
-    return rows.map(rowToEvent);
+    return rows.map(rowToEvent).filter((event) => isPublicSport(event.sport));
   } catch (error) {
-    if (isMissingDatabaseSchema(error)) return events.filter((event) => event.isPublished && !event.isArchived);
+    if (isMissingDatabaseSchema(error)) return events.filter((event) => event.isPublished && !event.isArchived && isPublicSport(event.sport));
     throw error;
   }
 }
@@ -480,7 +481,28 @@ export async function createAdminEvent(input: { title: string; sport: string; op
     slots.push(...(input.customSlots ?? []));
     if (slots.length === 0) slots.push({ name: "General Volunteer", category: "Volunteers", capacity: 1 });
     for (const [index, slot] of slots.entries()) {
-      await client.query("insert into volunteer_slots (event_id, name, category, capacity, sort_order) values ($1,$2,$3,$4,$5)", [event.rows[0].id, slot.name, slot.category, slot.capacity, index + 1]);
+      if (slot.category === "Student Volunteers") {
+        const studentShifts = input.schedule?.length ? input.schedule : [{ label: "Game", startsAt: input.startsAt }];
+        for (const [shiftIndex, shift] of studentShifts.entries()) {
+          await client.query(
+            `
+            insert into volunteer_slots (event_id, name, category, shift_start_at, shift_end_at, capacity, sort_order, instructions)
+            values ($1,$2,$3,$4::timestamptz - interval '30 minutes',$4::timestamptz + interval '60 minutes',$5,$6,$7)
+            `,
+            [
+              event.rows[0].id,
+              `${slot.name} - ${shift.label}`,
+              slot.category,
+              shift.startsAt,
+              slot.capacity,
+              index * 10 + shiftIndex + 1,
+              "Student shift begins 30 minutes before the listed game time and runs 1.5 hours.",
+            ],
+          );
+        }
+      } else {
+        await client.query("insert into volunteer_slots (event_id, name, category, capacity, sort_order) values ($1,$2,$3,$4,$5)", [event.rows[0].id, slot.name, slot.category, slot.capacity, index + 1]);
+      }
     }
   });
 }

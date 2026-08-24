@@ -19,3 +19,4 @@ on conflict do nothing;
 \ir ../migrations/008_booster_program_payments.sql
 \ir ../migrations/009_connected_stripe_accounts.sql
 \ir ../migrations/010_dashboard_email_settings.sql
+\ir ../migrations/005_student_shift_windows.sql

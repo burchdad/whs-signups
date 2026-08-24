@@ -3,7 +3,7 @@ import { BrandHeader } from "@/components/brand-header";
 import { EventCard } from "@/components/event-card";
 import { eventStatus } from "@/lib/availability";
 import { listPublicEvents } from "@/lib/repository";
-import { sportsOffered } from "@/lib/sports";
+import { publicSportsOffered } from "@/lib/sports";
 
 export const metadata = { title: "Events" };
 
@@ -27,7 +27,7 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
         <form className="wildcat-card mt-5 grid gap-3 rounded-sm p-4 sm:grid-cols-4">
           <select name="sport" defaultValue={params.sport ?? ""} className="min-h-11 rounded-sm border border-[var(--border)] px-3 font-semibold">
             <option value="">All sports</option>
-            {sportsOffered.map((sport) => <option key={sport} value={sport}>{sport}</option>)}
+            {publicSportsOffered.map((sport) => <option key={sport} value={sport}>{sport}</option>)}
           </select>
           <select name="type" defaultValue={params.type ?? ""} className="min-h-11 rounded-sm border border-[var(--border)] px-3 font-semibold">
             <option value="">All event types</option><option>Home Game</option><option>Tournament</option>

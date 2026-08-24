@@ -58,6 +58,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ sl
                       <div key={slot.id} className="wildcat-card grid gap-3 rounded-sm p-4 sm:grid-cols-[1fr_auto] sm:items-center">
                         <div>
                           <p className="font-black uppercase">{slot.name}</p>
+                          {slot.shiftStart ? <p className="text-sm font-black text-[var(--maroon)]">{formatDateTime(slot.shiftStart)}{slot.shiftEnd ? ` - ${new Date(slot.shiftEnd).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Chicago" })}` : ""}</p> : null}
                           <p className="text-sm font-medium text-[var(--muted)]">{remainingCount(slot)} of {slot.capacity} spots open{remainingCount(slot) <= 1 && remainingCount(slot) > 0 ? " / only 1 left" : ""}{remainingCount(slot) === 0 ? " / waitlist available" : ""}</p>
                         </div>
                         {openForSignup ? (

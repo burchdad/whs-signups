@@ -32,7 +32,7 @@ describe("domain behavior", () => {
     const slot = events[0].slots[0];
     expect(remainingCount(slot)).toBe(6);
     expect(isSlotAvailable(slot)).toBe(true);
-    expect(eventOpenPositions(events[0], new Date("2026-01-01T00:00:00.000Z"))).toBe(8);
+    expect(eventOpenPositions(events[0], new Date("2026-01-01T00:00:00.000Z"))).toBe(20);
   });
 
   it("rejects full slots", async () => {
@@ -82,7 +82,7 @@ describe("domain behavior", () => {
   it("keeps legacy sport URLs without showing duplicate sports", () => {
     expect(new Set(sportsOffered).size).toBe(sportsOffered.length);
     expect(sportFromSlug("volleyball-girls")).toBe("Volleyball");
-    expect(sportFromSlug("football-boys")).toBe("Football");
+    expect(sportFromSlug("football-boys")).toBeUndefined();
   });
 
   it("exports signup data as csv", () => {

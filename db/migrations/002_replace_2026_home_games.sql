@@ -65,10 +65,36 @@ values
 ('33333333-3333-4333-8333-333333333412','9th Grade','2026-10-20 17:00:00-05',1),('33333333-3333-4333-8333-333333333412','JV','2026-10-20 17:00:00-05',2),('33333333-3333-4333-8333-333333333412','Varsity','2026-10-20 18:00:00-05',3);
 
 insert into volunteer_slots (event_id, template_slot_id, name, category, shift_start_at, shift_end_at, capacity, sort_order, instructions)
-select e.id, vts.id, vts.name, vts.category, e.starts_at, e.ends_at, vts.default_capacity, vts.sort_order, vts.instructions
+select
+  e.id,
+  vts.id,
+  case
+    when vts.category = 'Student Volunteers' then 'Student Volunteer - ' || esi.label
+    else vts.name
+  end,
+  vts.category,
+  case
+    when vts.category = 'Student Volunteers' then esi.starts_at - interval '30 minutes'
+    else e.starts_at
+  end,
+  case
+    when vts.category = 'Student Volunteers' then esi.starts_at + interval '60 minutes'
+    else e.ends_at
+  end,
+  vts.default_capacity,
+  case
+    when vts.category = 'Student Volunteers' then esi.sort_order
+    else 100
+  end,
+  case
+    when vts.category = 'Student Volunteers' then 'Student shift begins 30 minutes before the listed game time and runs 1.5 hours.'
+    else vts.instructions
+  end
 from events e
 cross join volunteer_template_slots vts
+left join event_schedule_items esi on esi.event_id = e.id and vts.category = 'Student Volunteers'
 where e.organization_id = '11111111-1111-4111-8111-111111111111'
-  and vts.template_id = '22222222-2222-4222-8222-222222222223';
+  and vts.template_id = '22222222-2222-4222-8222-222222222223'
+  and (vts.category <> 'Student Volunteers' or esi.id is not null);
 
 commit;

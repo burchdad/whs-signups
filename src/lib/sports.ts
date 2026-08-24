@@ -23,6 +23,14 @@ export const groupPrograms = ["Band", "Choir", "Dance", "Other School Club"] as 
 export const participationAreas = [...sportsOffered, ...groupPrograms] as const;
 export type ParticipationArea = (typeof participationAreas)[number];
 
+const hiddenPublicSports = new Set<string>(["Football"]);
+
+export const publicSportsOffered = sportsOffered.filter((sport) => !hiddenPublicSports.has(sport));
+
+export function isPublicSport(sport: string) {
+  return !hiddenPublicSports.has(sport);
+}
+
 export function sportSlug(sport: string) {
   return sport.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
@@ -50,5 +58,6 @@ export function sportFromSlug(slug: string) {
     "football-boys": "Football",
     "volleyball-girls": "Volleyball",
   };
-  return aliases[slug] ?? sportsOffered.find((sport) => sportSlug(sport) === slug);
+  const sport = aliases[slug] ?? sportsOffered.find((candidate) => sportSlug(candidate) === slug);
+  return sport && isPublicSport(sport) ? sport : undefined;
 }

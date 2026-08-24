@@ -16,7 +16,7 @@ import { BrandHeader } from "@/components/brand-header";
 import { HeroCarousel } from "@/components/hero-carousel";
 import { eventOpenPositions, isEventSignupOpen } from "@/lib/availability";
 import { getSportPhotoMap, listPublicEvents } from "@/lib/repository";
-import { sportSlug, sportsOffered } from "@/lib/sports";
+import { publicSportsOffered, sportSlug } from "@/lib/sports";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,7 @@ export default async function Home() {
   const events = publicEvents.filter((event) => isEventSignupOpen(event));
   const upcomingEvents = events.slice(0, 3);
   const openPositions = events.reduce((total, event) => total + eventOpenPositions(event), 0);
-  const activeSports = sportsOffered
+  const activeSports = publicSportsOffered
     .map((sport) => ({ sport, count: events.filter((event) => event.sport === sport).length }))
     .sort((a, b) => b.count - a.count || a.sport.localeCompare(b.sport));
   const heroImages = Object.values(photoMap).flat().filter((image): image is { src: string; alt: string; label?: string } => Boolean(image));
@@ -51,7 +51,7 @@ export default async function Home() {
                 </Link>
               </div>
               <div className="mt-10 flex max-w-2xl flex-wrap gap-x-8 gap-y-4 border-t border-white/30 pt-6">
-                <ImpactStat value={sportsOffered.length} label="Wildcat programs" />
+                <ImpactStat value={publicSportsOffered.length} label="Wildcat programs" />
                 <ImpactStat value={events.length} label="Open events" />
                 <ImpactStat value={openPositions} label="Open positions" />
               </div>

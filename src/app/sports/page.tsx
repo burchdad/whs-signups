@@ -4,7 +4,7 @@ import { BrandHeader } from "@/components/brand-header";
 import { SportPhoto } from "@/components/sport-photo";
 import { isEventSignupOpen } from "@/lib/availability";
 import { getSportPhotoMap, listPublicEvents } from "@/lib/repository";
-import { sportSlug, sportsOffered } from "@/lib/sports";
+import { publicSportsOffered, sportSlug } from "@/lib/sports";
 
 export const metadata = { title: "Sports" };
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export default async function SportsPage() {
         </section>
         <section className="container py-10">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {sportsOffered.map((sport, index) => {
+            {publicSportsOffered.map((sport, index) => {
               const eventCount = openEvents.filter((event) => event.sport === sport).length;
               return (
                 <article key={sport} className="wildcat-card group overflow-hidden rounded-sm hover:border-[var(--gold)]">

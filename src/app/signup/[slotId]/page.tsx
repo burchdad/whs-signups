@@ -23,6 +23,7 @@ export default async function SignupPage({ params }: { params: Promise<{ slotId:
             <div><dt className="font-black uppercase text-[var(--gold)]">Event</dt><dd className="font-medium text-white/86">{event.title}</dd></div>
             <div><dt className="font-black uppercase text-[var(--gold)]">Date</dt><dd className="font-medium text-white/86">{formatDateTime(event.startsAt)}</dd></div>
             <div><dt className="font-black uppercase text-[var(--gold)]">Location</dt><dd className="font-medium text-white/86">{event.location}</dd></div>
+            {slot.shiftStart ? <div><dt className="font-black uppercase text-[var(--gold)]">Shift</dt><dd className="font-medium text-white/86">{formatDateTime(slot.shiftStart)}{slot.shiftEnd ? ` - ${new Date(slot.shiftEnd).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/Chicago" })}` : ""}</dd></div> : null}
             <div><dt className="font-black uppercase text-[var(--gold)]">Availability</dt><dd className="font-medium text-white/86">{remainingCount(slot)} of {slot.capacity} spots remaining{remainingCount(slot) === 0 ? " / waitlist available" : ""}</dd></div>
           </dl>
         </aside>
