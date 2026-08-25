@@ -12,7 +12,7 @@ export const templates: VolunteerTemplate[] = [
   {
     id: "22222222-2222-4222-8222-222222222223",
     name: "WHS Volleyball Game Volunteers",
-    description: "Every listed game needs two student volunteers, with adult coverage split into early and late shifts.",
+    description: "Every event needs student and adult coverage split into early and late shifts.",
     slots: [
       { name: "Student Volunteer", category: "Student Volunteers", capacity: 2, sortOrder: 1 },
       { name: "Adult Volunteer", category: "Adult Volunteers", capacity: 1, sortOrder: 2 },
@@ -78,9 +78,8 @@ export const events: VolunteerEvent[] = eventSeeds.map((seed, index) => {
       { id: scheduleId(index, 3), label: "Varsity", startsAt: centralIso(seed.date, seed.varsity), sortOrder: 3 },
     ],
     slots: [
-      { id: slotId(index, 1), eventId, name: "Student Volunteer - 9th Grade", category: "Student Volunteers", shiftStart: centralIso(seed.date, seed.ninth, -30), shiftEnd: centralIso(seed.date, seed.ninth, 60), capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 1, instructions: "Student shift begins 30 minutes before the listed game time and runs 1.5 hours." },
-      { id: slotId(index, 2), eventId, name: "Student Volunteer - JV", category: "Student Volunteers", shiftStart: centralIso(seed.date, seed.jv, -30), shiftEnd: centralIso(seed.date, seed.jv, 60), capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 2, instructions: "Student shift begins 30 minutes before the listed game time and runs 1.5 hours." },
-      { id: slotId(index, 3), eventId, name: "Student Volunteer - Varsity", category: "Student Volunteers", shiftStart: centralIso(seed.date, seed.varsity, -30), shiftEnd: centralIso(seed.date, seed.varsity, 60), capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 3, instructions: "Student shift begins 30 minutes before the listed game time and runs 1.5 hours." },
+      { id: slotId(index, 1), eventId, name: "Student Volunteer", category: "Student Volunteers", shiftStart: centralIso(seed.date, seed.start, -30), shiftEnd: centralIso(seed.date, seed.start, 60), capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 1, instructions: "Early student shift starts 30 minutes before the event and runs 1.5 hours." },
+      { id: slotId(index, 2), eventId, name: "Student Volunteer", category: "Student Volunteers", shiftStart: centralIso(seed.date, seed.start, 60), shiftEnd: centralIso(seed.date, seed.end), capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 2, instructions: "Late student shift runs from the midpoint through the event end." },
       { id: slotId(index, 8), eventId, name: "Adult Volunteer - Early", category: "Adult Volunteers", shiftStart: centralIso(seed.date, seed.start, -30), shiftEnd: centralIso(seed.date, seed.start, 60), capacity: 1, filled: 0, isOpen: true, isVisible: true, sortOrder: 100, instructions: "Early adult shift starts 30 minutes before the event and runs 1.5 hours." },
       { id: slotId(index, 9), eventId, name: "Adult Volunteer - Late", category: "Adult Volunteers", shiftStart: centralIso(seed.date, seed.start, 60), shiftEnd: centralIso(seed.date, seed.end), capacity: 1, filled: 0, isOpen: true, isVisible: true, sortOrder: 101, instructions: "Late adult shift runs from the midpoint through the event end." },
     ],

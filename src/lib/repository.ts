@@ -482,21 +482,24 @@ export async function createAdminEvent(input: { title: string; sport: string; op
     if (slots.length === 0) slots.push({ name: "General Volunteer", category: "Volunteers", capacity: 1 });
     for (const [index, slot] of slots.entries()) {
       if (slot.category === "Student Volunteers") {
-        const studentShifts = input.schedule?.length ? input.schedule : [{ label: "Game", startsAt: input.startsAt }];
-        for (const [shiftIndex, shift] of studentShifts.entries()) {
+        const studentShifts = [
+          { shiftStart: "$4::timestamptz - interval '30 minutes'", shiftEnd: "$4::timestamptz + interval '60 minutes'", sortOrder: index * 10 + 1, instructions: "Early student shift starts 30 minutes before the event and runs 1.5 hours." },
+          { shiftStart: "$4::timestamptz + interval '60 minutes'", shiftEnd: "$4::timestamptz + interval '150 minutes'", sortOrder: index * 10 + 2, instructions: "Late student shift runs from the midpoint through the event end." },
+        ];
+        for (const shift of studentShifts) {
           await client.query(
             `
             insert into volunteer_slots (event_id, name, category, shift_start_at, shift_end_at, capacity, sort_order, instructions)
-            values ($1,$2,$3,$4::timestamptz - interval '30 minutes',$4::timestamptz + interval '60 minutes',$5,$6,$7)
+            values ($1,$2,$3,${shift.shiftStart},${shift.shiftEnd},$5,$6,$7)
             `,
             [
               event.rows[0].id,
-              `${slot.name} - ${shift.label}`,
+              slot.name,
               slot.category,
-              shift.startsAt,
+              input.startsAt,
               slot.capacity,
-              index * 10 + shiftIndex + 1,
-              "Student shift begins 30 minutes before the listed game time and runs 1.5 hours.",
+              shift.sortOrder,
+              shift.instructions,
             ],
           );
         }

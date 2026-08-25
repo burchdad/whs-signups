@@ -32,7 +32,8 @@ describe("domain behavior", () => {
     const slot = events[0].slots[0];
     expect(remainingCount(slot)).toBe(2);
     expect(isSlotAvailable(slot)).toBe(true);
-    expect(eventOpenPositions(events[0], new Date("2026-01-01T00:00:00.000Z"))).toBe(8);
+    expect(eventOpenPositions(events[0], new Date("2026-01-01T00:00:00.000Z"))).toBe(6);
+    expect(events[0].slots.filter((candidate) => candidate.category === "Student Volunteers").map((candidate) => candidate.name)).toEqual(["Student Volunteer", "Student Volunteer"]);
   });
 
   it("rejects full slots", async () => {

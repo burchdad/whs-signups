@@ -25,13 +25,13 @@ values (
   '22222222-2222-4222-8222-222222222223',
   '11111111-1111-4111-8111-111111111111',
   'WHS Volleyball Game Volunteers',
-  'Every listed game needs two student volunteers, with adult coverage split into early and late shifts.'
+  'Every event needs student and adult coverage split into early and late shifts.'
 )
 on conflict do nothing;
 
 insert into volunteer_template_slots (template_id, name, category, default_capacity, sort_order, instructions)
 values
-('22222222-2222-4222-8222-222222222223', 'Student Volunteer', 'Student Volunteers', 2, 1, 'Student volunteer support for one listed game.'),
+('22222222-2222-4222-8222-222222222223', 'Student Volunteer', 'Student Volunteers', 2, 1, 'Student volunteer support for one shift.'),
 ('22222222-2222-4222-8222-222222222223', 'Adult Volunteer', 'Adult Volunteers', 1, 2, 'Adult volunteer support for one shift.');
 
 insert into events (id, organization_id, sport_id, season_id, title, slug, opponent, event_type, event_date, starts_at, ends_at, location, address, description, is_published)
@@ -68,16 +68,29 @@ insert into volunteer_slots (event_id, template_slot_id, name, category, shift_s
 select
   e.id,
   vts.id,
-  'Student Volunteer - ' || esi.label,
+  'Student Volunteer',
   vts.category,
-  esi.starts_at - interval '30 minutes',
-  esi.starts_at + interval '60 minutes',
+  e.starts_at - interval '30 minutes',
+  e.starts_at + interval '60 minutes',
   vts.default_capacity,
-  esi.sort_order,
-  'Student shift begins 30 minutes before the listed game time and runs 1.5 hours.'
+  1,
+  'Early student shift starts 30 minutes before the event and runs 1.5 hours.'
 from events e
 join volunteer_template_slots vts on vts.template_id = '22222222-2222-4222-8222-222222222223' and vts.category = 'Student Volunteers'
-join event_schedule_items esi on esi.event_id = e.id
+where e.organization_id = '11111111-1111-4111-8111-111111111111'
+union all
+select
+  e.id,
+  vts.id,
+  'Student Volunteer',
+  vts.category,
+  e.starts_at + interval '60 minutes',
+  coalesce(e.ends_at, e.starts_at + interval '150 minutes'),
+  vts.default_capacity,
+  2,
+  'Late student shift runs from the midpoint through the event end.'
+from events e
+join volunteer_template_slots vts on vts.template_id = '22222222-2222-4222-8222-222222222223' and vts.category = 'Student Volunteers'
 where e.organization_id = '11111111-1111-4111-8111-111111111111'
 union all
 select

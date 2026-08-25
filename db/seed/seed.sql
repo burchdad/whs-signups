@@ -22,3 +22,4 @@ on conflict do nothing;
 \ir ../migrations/005_student_shift_windows.sql
 \ir ../migrations/011_adult_shift_windows.sql
 \ir ../migrations/012_split_adult_shifts_and_reduce_student_capacity.sql
+\ir ../migrations/013_split_student_shifts_without_game_labels.sql
