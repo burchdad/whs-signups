@@ -79,6 +79,7 @@ select
   end,
   case
     when vts.category = 'Student Volunteers' then esi.starts_at + interval '60 minutes'
+    when vts.category = 'Adult Volunteers' then e.starts_at + interval '2 hours'
     else e.ends_at
   end,
   vts.default_capacity,
@@ -88,6 +89,7 @@ select
   end,
   case
     when vts.category = 'Student Volunteers' then 'Student shift begins 30 minutes before the listed game time and runs 1.5 hours.'
+    when vts.category = 'Adult Volunteers' then 'Adult shift runs 2 hours from the event start time.'
     else vts.instructions
   end
 from events e

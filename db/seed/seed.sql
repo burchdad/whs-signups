@@ -20,3 +20,4 @@ on conflict do nothing;
 \ir ../migrations/009_connected_stripe_accounts.sql
 \ir ../migrations/010_dashboard_email_settings.sql
 \ir ../migrations/005_student_shift_windows.sql
+\ir ../migrations/011_adult_shift_windows.sql

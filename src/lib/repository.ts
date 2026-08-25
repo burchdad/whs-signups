@@ -500,6 +500,14 @@ export async function createAdminEvent(input: { title: string; sport: string; op
             ],
           );
         }
+      } else if (slot.category === "Adult Volunteers") {
+        await client.query(
+          `
+          insert into volunteer_slots (event_id, name, category, shift_start_at, shift_end_at, capacity, sort_order, instructions)
+          values ($1,$2,$3,$4::timestamptz,$4::timestamptz + interval '2 hours',$5,$6,$7)
+          `,
+          [event.rows[0].id, slot.name, slot.category, input.startsAt, slot.capacity, index + 1, "Adult shift runs 2 hours from the event start time."],
+        );
       } else {
         await client.query("insert into volunteer_slots (event_id, name, category, capacity, sort_order) values ($1,$2,$3,$4,$5)", [event.rows[0].id, slot.name, slot.category, slot.capacity, index + 1]);
       }
