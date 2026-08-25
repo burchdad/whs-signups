@@ -501,13 +501,19 @@ export async function createAdminEvent(input: { title: string; sport: string; op
           );
         }
       } else if (slot.category === "Adult Volunteers") {
-        await client.query(
-          `
-          insert into volunteer_slots (event_id, name, category, shift_start_at, shift_end_at, capacity, sort_order, instructions)
-          values ($1,$2,$3,$4::timestamptz,$4::timestamptz + interval '2 hours',$5,$6,$7)
-          `,
-          [event.rows[0].id, slot.name, slot.category, input.startsAt, slot.capacity, index + 1, "Adult shift runs 2 hours from the event start time."],
-        );
+        const adultShifts = [
+          { name: `${slot.name} - Early`, shiftStart: "$4::timestamptz - interval '30 minutes'", shiftEnd: "$4::timestamptz + interval '60 minutes'", sortOrder: index * 10 + 100, instructions: "Early adult shift starts 30 minutes before the event and runs 1.5 hours." },
+          { name: `${slot.name} - Late`, shiftStart: "$4::timestamptz + interval '60 minutes'", shiftEnd: "$4::timestamptz + interval '150 minutes'", sortOrder: index * 10 + 101, instructions: "Late adult shift runs from the midpoint through the event end." },
+        ];
+        for (const shift of adultShifts) {
+          await client.query(
+            `
+            insert into volunteer_slots (event_id, name, category, shift_start_at, shift_end_at, capacity, sort_order, instructions)
+            values ($1,$2,$3,${shift.shiftStart},${shift.shiftEnd},$5,$6,$7)
+            `,
+            [event.rows[0].id, shift.name, slot.category, input.startsAt, slot.capacity, shift.sortOrder, shift.instructions],
+          );
+        }
       } else {
         await client.query("insert into volunteer_slots (event_id, name, category, capacity, sort_order) values ($1,$2,$3,$4,$5)", [event.rows[0].id, slot.name, slot.category, slot.capacity, index + 1]);
       }

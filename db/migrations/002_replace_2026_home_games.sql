@@ -25,14 +25,14 @@ values (
   '22222222-2222-4222-8222-222222222223',
   '11111111-1111-4111-8111-111111111111',
   'WHS Volleyball Game Volunteers',
-  'Every home event needs six student volunteers and two adult volunteers.'
+  'Every listed game needs two student volunteers, with adult coverage split into early and late shifts.'
 )
 on conflict do nothing;
 
 insert into volunteer_template_slots (template_id, name, category, default_capacity, sort_order, instructions)
 values
-('22222222-2222-4222-8222-222222222223', 'Student Volunteer', 'Student Volunteers', 6, 1, 'Student volunteer support for the event.'),
-('22222222-2222-4222-8222-222222222223', 'Adult Volunteer', 'Adult Volunteers', 2, 2, 'Adult volunteer support for the event.');
+('22222222-2222-4222-8222-222222222223', 'Student Volunteer', 'Student Volunteers', 2, 1, 'Student volunteer support for one listed game.'),
+('22222222-2222-4222-8222-222222222223', 'Adult Volunteer', 'Adult Volunteers', 1, 2, 'Adult volunteer support for one shift.');
 
 insert into events (id, organization_id, sport_id, season_id, title, slug, opponent, event_type, event_date, starts_at, ends_at, location, address, description, is_published)
 values
@@ -68,35 +68,44 @@ insert into volunteer_slots (event_id, template_slot_id, name, category, shift_s
 select
   e.id,
   vts.id,
-  case
-    when vts.category = 'Student Volunteers' then 'Student Volunteer - ' || esi.label
-    else vts.name
-  end,
+  'Student Volunteer - ' || esi.label,
   vts.category,
-  case
-    when vts.category = 'Student Volunteers' then esi.starts_at - interval '30 minutes'
-    else e.starts_at
-  end,
-  case
-    when vts.category = 'Student Volunteers' then esi.starts_at + interval '60 minutes'
-    when vts.category = 'Adult Volunteers' then e.starts_at + interval '2 hours'
-    else e.ends_at
-  end,
+  esi.starts_at - interval '30 minutes',
+  esi.starts_at + interval '60 minutes',
   vts.default_capacity,
-  case
-    when vts.category = 'Student Volunteers' then esi.sort_order
-    else 100
-  end,
-  case
-    when vts.category = 'Student Volunteers' then 'Student shift begins 30 minutes before the listed game time and runs 1.5 hours.'
-    when vts.category = 'Adult Volunteers' then 'Adult shift runs 2 hours from the event start time.'
-    else vts.instructions
-  end
+  esi.sort_order,
+  'Student shift begins 30 minutes before the listed game time and runs 1.5 hours.'
 from events e
-cross join volunteer_template_slots vts
-left join event_schedule_items esi on esi.event_id = e.id and vts.category = 'Student Volunteers'
+join volunteer_template_slots vts on vts.template_id = '22222222-2222-4222-8222-222222222223' and vts.category = 'Student Volunteers'
+join event_schedule_items esi on esi.event_id = e.id
 where e.organization_id = '11111111-1111-4111-8111-111111111111'
-  and vts.template_id = '22222222-2222-4222-8222-222222222223'
-  and (vts.category <> 'Student Volunteers' or esi.id is not null);
+union all
+select
+  e.id,
+  vts.id,
+  'Adult Volunteer - Early',
+  vts.category,
+  e.starts_at - interval '30 minutes',
+  e.starts_at + interval '60 minutes',
+  vts.default_capacity,
+  100,
+  'Early adult shift starts 30 minutes before the event and runs 1.5 hours.'
+from events e
+join volunteer_template_slots vts on vts.template_id = '22222222-2222-4222-8222-222222222223' and vts.category = 'Adult Volunteers'
+where e.organization_id = '11111111-1111-4111-8111-111111111111'
+union all
+select
+  e.id,
+  vts.id,
+  'Adult Volunteer - Late',
+  vts.category,
+  e.starts_at + interval '60 minutes',
+  e.ends_at,
+  vts.default_capacity,
+  101,
+  'Late adult shift runs from the midpoint through the event end.'
+from events e
+join volunteer_template_slots vts on vts.template_id = '22222222-2222-4222-8222-222222222223' and vts.category = 'Adult Volunteers'
+where e.organization_id = '11111111-1111-4111-8111-111111111111';
 
 commit;

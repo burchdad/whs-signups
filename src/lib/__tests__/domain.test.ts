@@ -30,9 +30,9 @@ describe("domain behavior", () => {
 
   it("calculates slot availability", () => {
     const slot = events[0].slots[0];
-    expect(remainingCount(slot)).toBe(6);
+    expect(remainingCount(slot)).toBe(2);
     expect(isSlotAvailable(slot)).toBe(true);
-    expect(eventOpenPositions(events[0], new Date("2026-01-01T00:00:00.000Z"))).toBe(20);
+    expect(eventOpenPositions(events[0], new Date("2026-01-01T00:00:00.000Z"))).toBe(8);
   });
 
   it("rejects full slots", async () => {
