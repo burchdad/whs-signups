@@ -41,6 +41,8 @@ export async function saveEventDetails(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/admin/events");
   revalidatePath(`/admin/events/${id}`);
+  revalidatePath("/events");
+  redirect(`/admin/events/${id}?saved=event`);
 }
 
 export async function setSlotOpen(formData: FormData) {
@@ -78,6 +80,7 @@ export async function saveScheduleItem(formData: FormData) {
   revalidatePath("/admin/events");
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath("/events");
+  redirect(`/admin/events/${eventId}?saved=time`);
 }
 
 export async function addScheduleItem(formData: FormData) {
@@ -92,6 +95,7 @@ export async function addScheduleItem(formData: FormData) {
   revalidatePath("/admin/events");
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath("/events");
+  redirect(`/admin/events/${eventId}?saved=time`);
 }
 
 export async function removeScheduleItem(formData: FormData) {
@@ -101,6 +105,7 @@ export async function removeScheduleItem(formData: FormData) {
   revalidatePath("/admin/events");
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath("/events");
+  redirect(`/admin/events/${eventId}?saved=time`);
 }
 
 function slotInput(formData: FormData, eventId: string) {
@@ -126,6 +131,7 @@ export async function saveVolunteerSlot(formData: FormData) {
   revalidatePath("/admin/events");
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath("/events");
+  redirect(`/admin/events/${eventId}?saved=slot`);
 }
 
 export async function addVolunteerSlot(formData: FormData) {
@@ -136,6 +142,7 @@ export async function addVolunteerSlot(formData: FormData) {
   revalidatePath("/admin/events");
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath("/events");
+  redirect(`/admin/events/${eventId}?saved=slot`);
 }
 
 export async function deleteVolunteerSlot(formData: FormData) {
@@ -146,6 +153,7 @@ export async function deleteVolunteerSlot(formData: FormData) {
   revalidatePath("/admin/events");
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath("/events");
+  redirect(`/admin/events/${eventId}?saved=slot`);
 }
 
 export async function cancelSignup(formData: FormData) {

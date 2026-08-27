@@ -6,9 +6,10 @@ import { isoToCentralLocalInput } from "@/lib/utils";
 
 export const metadata = { title: "Event Detail" };
 
-export default async function AdminEventDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AdminEventDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string }> }) {
   const session = await requireAdmin();
   const { id } = await params;
+  const status = await searchParams;
   const event = (await listAdminEvents(session.allowedSports)).find((candidate) => candidate.id === id);
   if (!event) notFound();
   const startsAtLocal = isoToCentralLocalInput(event.startsAt);
@@ -18,6 +19,7 @@ export default async function AdminEventDetailPage({ params }: { params: Promise
     <>
       <p className="eyebrow">Event command</p>
       <h1 className="text-3xl font-black uppercase text-[var(--ink)]">{event.title}</h1>
+      {status.saved ? <p role="status" className="mt-4 rounded-sm border border-[#b7e2bf] bg-[#f1fbf3] p-3 font-black uppercase tracking-wide text-[#225c2d]">Saved {status.saved} changes.</p> : null}
       <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_1fr]">
         <section className="wildcat-card rounded-sm p-5">
           <h2 className="text-xl font-black uppercase text-[var(--ink)]">Event details</h2>
