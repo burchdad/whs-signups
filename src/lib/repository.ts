@@ -350,6 +350,73 @@ export async function updateSlotState(input: { slotId: string; isOpen: boolean }
   await getPool().query("update volunteer_slots set is_open = $2, updated_at = now() where id = $1", [input.slotId, input.isOpen]);
 }
 
+export async function updateScheduleItem(input: { id: string; eventId: string; label: string; startsAt: string; sortOrder: number }) {
+  if (!hasDatabaseUrl()) return;
+  await getPool().query(
+    "update event_schedule_items set label = $3, starts_at = $4::timestamptz, sort_order = $5 where id = $1 and event_id = $2",
+    [input.id, input.eventId, input.label.trim(), input.startsAt, input.sortOrder],
+  );
+}
+
+export async function createScheduleItem(input: { eventId: string; label: string; startsAt: string; sortOrder: number }) {
+  if (!hasDatabaseUrl()) return;
+  await getPool().query(
+    "insert into event_schedule_items (event_id, label, starts_at, sort_order) values ($1, $2, $3::timestamptz, $4)",
+    [input.eventId, input.label.trim(), input.startsAt, input.sortOrder],
+  );
+}
+
+export async function deleteScheduleItem(input: { id: string; eventId: string }) {
+  if (!hasDatabaseUrl()) return;
+  await getPool().query("delete from event_schedule_items where id = $1 and event_id = $2", [input.id, input.eventId]);
+}
+
+export async function updateVolunteerSlot(input: { id: string; eventId: string; name: string; category: string; shiftStart?: string; shiftEnd?: string; capacity: number; sortOrder: number; instructions?: string; isOpen: boolean; isVisible: boolean }) {
+  if (!hasDatabaseUrl()) return;
+  await getPool().query(
+    `
+    update volunteer_slots
+    set name = $3, category = $4, shift_start_at = nullif($5, '')::timestamptz,
+        shift_end_at = nullif($6, '')::timestamptz, capacity = $7, sort_order = $8,
+        instructions = nullif($9, ''), is_open = $10, is_visible = $11, updated_at = now()
+    where id = $1 and event_id = $2
+    `,
+    [input.id, input.eventId, input.name.trim(), input.category.trim(), input.shiftStart ?? "", input.shiftEnd ?? "", input.capacity, input.sortOrder, input.instructions?.trim() ?? "", input.isOpen, input.isVisible],
+  );
+}
+
+export async function createVolunteerSlot(input: { eventId: string; name: string; category: string; shiftStart?: string; shiftEnd?: string; capacity: number; sortOrder: number; instructions?: string; isOpen: boolean; isVisible: boolean }) {
+  if (!hasDatabaseUrl()) return;
+  await getPool().query(
+    `
+    insert into volunteer_slots (event_id, name, category, shift_start_at, shift_end_at, capacity, sort_order, instructions, is_open, is_visible)
+    values ($1, $2, $3, nullif($4, '')::timestamptz, nullif($5, '')::timestamptz, $6, $7, nullif($8, ''), $9, $10)
+    `,
+    [input.eventId, input.name.trim(), input.category.trim(), input.shiftStart ?? "", input.shiftEnd ?? "", input.capacity, input.sortOrder, input.instructions?.trim() ?? "", input.isOpen, input.isVisible],
+  );
+}
+
+export async function removeVolunteerSlot(input: { id: string; eventId: string }) {
+  if (!hasDatabaseUrl()) return;
+  await getPool().query(
+    `
+    update volunteer_slots
+    set is_visible = false, is_open = false, updated_at = now()
+    where id = $1 and event_id = $2
+      and exists (select 1 from signups s where s.slot_id = volunteer_slots.id)
+    `,
+    [input.id, input.eventId],
+  );
+  await getPool().query(
+    `
+    delete from volunteer_slots
+    where id = $1 and event_id = $2
+      and not exists (select 1 from signups s where s.slot_id = volunteer_slots.id)
+    `,
+    [input.id, input.eventId],
+  );
+}
+
 export async function cancelSignupById(id: string) {
   if (!hasDatabaseUrl()) return;
   await getPool().query("update signups set status = 'cancelled', cancelled_at = now(), updated_at = now() where id = $1 and status in ('confirmed', 'waitlisted')", [id]);

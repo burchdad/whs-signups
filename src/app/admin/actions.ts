@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { sendCancellationEmails } from "@/lib/email/service";
-import { cancelSignupById, createAdminEvent, createVolunteerTemplate, getSignupContextById, listAdminEvents, saveSportPhoto, updateEventDetails, updateSlotState } from "@/lib/repository";
+import { cancelSignupById, createAdminEvent, createScheduleItem, createVolunteerSlot, createVolunteerTemplate, deleteScheduleItem, getSignupContextById, listAdminEvents, removeVolunteerSlot, saveSportPhoto, updateEventDetails, updateScheduleItem, updateSlotState, updateVolunteerSlot } from "@/lib/repository";
 import { participationAreas, sportsOffered, type SportName } from "@/lib/sports";
 import { adminRoles, canManage, canManageAdmins, canManageOrganizationSettings, canManageProgram, canManageProgramPayments, changeAdminPassword, createAdminAccount, createAdminProgram, getAssignableAdminOwner, hasSportAccess, parseEmailList, updateAdminProgramBilling, updateOrganizationEmailSettings, updateProgramNotificationEmails, updateProgramStripeAccount } from "@/lib/admin-access";
 import { adminNotificationRecipientsForSport } from "@/lib/admin-access";
@@ -50,6 +50,102 @@ export async function setSlotOpen(formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/admin/events");
   revalidatePath(`/admin/events/${eventId}`);
+}
+
+function positiveInt(value: FormDataEntryValue | null, fallback: number) {
+  return Math.max(1, Number.parseInt(String(value ?? ""), 10) || fallback);
+}
+
+function sortInt(value: FormDataEntryValue | null, fallback: number) {
+  return Number.parseInt(String(value ?? ""), 10) || fallback;
+}
+
+function optionalCentralIso(value: FormDataEntryValue | null) {
+  const text = String(value ?? "").trim();
+  return text ? centralLocalToIso(text) : undefined;
+}
+
+export async function saveScheduleItem(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "");
+  await requireEventAccess(eventId);
+  await updateScheduleItem({
+    id: String(formData.get("scheduleItemId") ?? ""),
+    eventId,
+    label: String(formData.get("label") ?? ""),
+    startsAt: centralLocalToIso(String(formData.get("startsAt") ?? "")),
+    sortOrder: sortInt(formData.get("sortOrder"), 1),
+  });
+  revalidatePath("/admin/events");
+  revalidatePath(`/admin/events/${eventId}`);
+  revalidatePath("/events");
+}
+
+export async function addScheduleItem(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "");
+  await requireEventAccess(eventId);
+  await createScheduleItem({
+    eventId,
+    label: String(formData.get("label") ?? ""),
+    startsAt: centralLocalToIso(String(formData.get("startsAt") ?? "")),
+    sortOrder: sortInt(formData.get("sortOrder"), 1),
+  });
+  revalidatePath("/admin/events");
+  revalidatePath(`/admin/events/${eventId}`);
+  revalidatePath("/events");
+}
+
+export async function removeScheduleItem(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "");
+  await requireEventAccess(eventId);
+  await deleteScheduleItem({ id: String(formData.get("scheduleItemId") ?? ""), eventId });
+  revalidatePath("/admin/events");
+  revalidatePath(`/admin/events/${eventId}`);
+  revalidatePath("/events");
+}
+
+function slotInput(formData: FormData, eventId: string) {
+  return {
+    eventId,
+    name: String(formData.get("name") ?? ""),
+    category: String(formData.get("category") ?? "Volunteers"),
+    shiftStart: optionalCentralIso(formData.get("shiftStart")),
+    shiftEnd: optionalCentralIso(formData.get("shiftEnd")),
+    capacity: positiveInt(formData.get("capacity"), 1),
+    sortOrder: sortInt(formData.get("sortOrder"), 1),
+    instructions: String(formData.get("instructions") ?? ""),
+    isOpen: String(formData.get("isOpen")) === "on",
+    isVisible: String(formData.get("isVisible")) === "on",
+  };
+}
+
+export async function saveVolunteerSlot(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "");
+  await requireEventAccess(eventId);
+  await updateVolunteerSlot({ id: String(formData.get("slotId") ?? ""), ...slotInput(formData, eventId) });
+  revalidatePath("/admin");
+  revalidatePath("/admin/events");
+  revalidatePath(`/admin/events/${eventId}`);
+  revalidatePath("/events");
+}
+
+export async function addVolunteerSlot(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "");
+  await requireEventAccess(eventId);
+  await createVolunteerSlot(slotInput(formData, eventId));
+  revalidatePath("/admin");
+  revalidatePath("/admin/events");
+  revalidatePath(`/admin/events/${eventId}`);
+  revalidatePath("/events");
+}
+
+export async function deleteVolunteerSlot(formData: FormData) {
+  const eventId = String(formData.get("eventId") ?? "");
+  await requireEventAccess(eventId);
+  await removeVolunteerSlot({ id: String(formData.get("slotId") ?? ""), eventId });
+  revalidatePath("/admin");
+  revalidatePath("/admin/events");
+  revalidatePath(`/admin/events/${eventId}`);
+  revalidatePath("/events");
 }
 
 export async function cancelSignup(formData: FormData) {

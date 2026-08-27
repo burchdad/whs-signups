@@ -39,7 +39,7 @@ const eventSeeds: EventSeed[] = [
   { idSuffix: "401", date: "2026-08-07", start: "09:00", end: "13:30", title: "Home Scrimmage - Carthage, Bullard & Lindale", slug: "home-scrimmage-carthage-bullard-lindale-2026-08-07", eventType: "Scrimmage", description: "Home scrimmage", ninth: "09:00", jv: "09:00", varsity: "09:00" },
   { idSuffix: "402", date: "2026-08-08", start: "09:00", end: "13:30", title: "Home Scrimmage - PT, Bullard & Tyler", slug: "home-scrimmage-pt-bullard-tyler-2026-08-08", eventType: "Scrimmage", description: "Home scrimmage", ninth: "09:00", jv: "09:00", varsity: "09:00" },
   { idSuffix: "403", date: "2026-09-01", start: "17:00", end: "19:30", title: "Whitehouse vs. Lufkin", slug: "whitehouse-vs-lufkin-2026-09-01", opponent: "Lufkin", eventType: "Home Game", ninth: "17:00", jv: "17:00", varsity: "18:00" },
-  { idSuffix: "404", date: "2026-09-03", start: "08:00", end: "18:00", title: "Whitehouse Volleyball Tournament - Day 1", slug: "whitehouse-volleyball-tournament-day-1-2026-09-03", eventType: "Tournament", description: "Varsity tournament; ending time not listed", ninth: "08:00", jv: "08:00", varsity: "09:00" },
+  { idSuffix: "404", date: "2026-09-03", start: "09:00", end: "15:00", title: "Whitehouse Volleyball Tournament - Day 1", slug: "whitehouse-volleyball-tournament-day-1-2026-09-03", eventType: "Tournament", description: "Varsity tournament.", ninth: "", jv: "", varsity: "09:00" },
   { idSuffix: "405", date: "2026-09-05", start: "08:00", end: "18:00", title: "Whitehouse Volleyball Tournament - Day 2", slug: "whitehouse-volleyball-tournament-day-2-2026-09-05", eventType: "Tournament", description: "Varsity tournament; ending time not listed", ninth: "08:00", jv: "08:00", varsity: "09:00" },
   { idSuffix: "406", date: "2026-09-04", start: "16:30", end: "19:00", title: "Whitehouse vs. Van", slug: "whitehouse-vs-van-2026-09-04", opponent: "Van", eventType: "Home Game", ninth: "17:30", jv: "17:30", varsity: "16:30" },
   { idSuffix: "407", date: "2026-09-08", start: "17:00", end: "19:30", title: "Whitehouse vs. Hallsville", slug: "whitehouse-vs-hallsville-2026-09-08", opponent: "Hallsville", eventType: "Home Game", ninth: "17:00", jv: "17:00", varsity: "18:00" },
@@ -52,6 +52,26 @@ const eventSeeds: EventSeed[] = [
 
 export const events: VolunteerEvent[] = eventSeeds.map((seed, index) => {
   const eventId = `33333333-3333-4333-8333-333333333${seed.idSuffix}`;
+  const isDayOneTournament = seed.slug === "whitehouse-volleyball-tournament-day-1-2026-09-03";
+  const schedule = [
+    seed.ninth ? { id: scheduleId(index, 1), label: "9th Grade", startsAt: centralIso(seed.date, seed.ninth), sortOrder: 1 } : undefined,
+    seed.jv ? { id: scheduleId(index, 2), label: "JV", startsAt: centralIso(seed.date, seed.jv), sortOrder: 2 } : undefined,
+    seed.varsity ? { id: scheduleId(index, 3), label: "Varsity", startsAt: centralIso(seed.date, seed.varsity), sortOrder: isDayOneTournament ? 1 : 3 } : undefined,
+  ].filter((item) => item !== undefined);
+  const defaultSlots = [
+    { id: slotId(index, 1), eventId, name: "Student Volunteer", category: "Student Volunteers", shiftStart: centralIso(seed.date, seed.start, -30), shiftEnd: centralIso(seed.date, seed.start, 60), capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 1, instructions: "Early student shift starts 30 minutes before the event and runs 1.5 hours." },
+    { id: slotId(index, 2), eventId, name: "Student Volunteer", category: "Student Volunteers", shiftStart: centralIso(seed.date, seed.start, 60), shiftEnd: centralIso(seed.date, seed.end), capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 2, instructions: "Late student shift runs from the midpoint through the event end." },
+    { id: slotId(index, 8), eventId, name: "Adult Volunteer - Early", category: "Adult Volunteers", shiftStart: centralIso(seed.date, seed.start, -30), shiftEnd: centralIso(seed.date, seed.start, 60), capacity: 1, filled: 0, isOpen: true, isVisible: true, sortOrder: 100, instructions: "Early adult shift starts 30 minutes before the event and runs 1.5 hours." },
+    { id: slotId(index, 9), eventId, name: "Adult Volunteer - Late", category: "Adult Volunteers", shiftStart: centralIso(seed.date, seed.start, 60), shiftEnd: centralIso(seed.date, seed.end), capacity: 1, filled: 0, isOpen: true, isVisible: true, sortOrder: 101, instructions: "Late adult shift runs from the midpoint through the event end." },
+  ];
+  const tournamentSlots = [
+    { id: slotId(index, 1), eventId, name: "Student Volunteer", category: "Student Volunteers", shiftStart: centralIso(seed.date, "09:00"), shiftEnd: centralIso(seed.date, "11:00"), capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 1, instructions: "Tournament shift runs 2 hours." },
+    { id: slotId(index, 2), eventId, name: "Student Volunteer", category: "Student Volunteers", shiftStart: centralIso(seed.date, "11:00"), shiftEnd: centralIso(seed.date, "13:00"), capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 2, instructions: "Tournament shift runs 2 hours." },
+    { id: slotId(index, 3), eventId, name: "Student Volunteer", category: "Student Volunteers", shiftStart: centralIso(seed.date, "13:00"), shiftEnd: centralIso(seed.date, "15:00"), capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 3, instructions: "Tournament shift runs 2 hours." },
+    { id: slotId(index, 4), eventId, name: "Adult Volunteer", category: "Adult Volunteers", shiftStart: centralIso(seed.date, "09:00"), shiftEnd: centralIso(seed.date, "11:00"), capacity: 1, filled: 0, isOpen: true, isVisible: true, sortOrder: 101, instructions: "Tournament shift runs 2 hours." },
+    { id: slotId(index, 5), eventId, name: "Adult Volunteer", category: "Adult Volunteers", shiftStart: centralIso(seed.date, "11:00"), shiftEnd: centralIso(seed.date, "13:00"), capacity: 1, filled: 0, isOpen: true, isVisible: true, sortOrder: 102, instructions: "Tournament shift runs 2 hours." },
+    { id: slotId(index, 6), eventId, name: "Adult Volunteer", category: "Adult Volunteers", shiftStart: centralIso(seed.date, "13:00"), shiftEnd: centralIso(seed.date, "15:00"), capacity: 1, filled: 0, isOpen: true, isVisible: true, sortOrder: 103, instructions: "Tournament shift runs 2 hours." },
+  ];
   return {
     id: eventId,
     organizationId: organization.id,
@@ -72,17 +92,8 @@ export const events: VolunteerEvent[] = eventSeeds.map((seed, index) => {
     contactName: "WHS Volleyball Booster Club",
     contactEmail: organization.contactEmail,
     isArchived: false,
-    schedule: [
-      { id: scheduleId(index, 1), label: "9th Grade", startsAt: centralIso(seed.date, seed.ninth), sortOrder: 1 },
-      { id: scheduleId(index, 2), label: "JV", startsAt: centralIso(seed.date, seed.jv), sortOrder: 2 },
-      { id: scheduleId(index, 3), label: "Varsity", startsAt: centralIso(seed.date, seed.varsity), sortOrder: 3 },
-    ],
-    slots: [
-      { id: slotId(index, 1), eventId, name: "Student Volunteer", category: "Student Volunteers", shiftStart: centralIso(seed.date, seed.start, -30), shiftEnd: centralIso(seed.date, seed.start, 60), capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 1, instructions: "Early student shift starts 30 minutes before the event and runs 1.5 hours." },
-      { id: slotId(index, 2), eventId, name: "Student Volunteer", category: "Student Volunteers", shiftStart: centralIso(seed.date, seed.start, 60), shiftEnd: centralIso(seed.date, seed.end), capacity: 2, filled: 0, isOpen: true, isVisible: true, sortOrder: 2, instructions: "Late student shift runs from the midpoint through the event end." },
-      { id: slotId(index, 8), eventId, name: "Adult Volunteer - Early", category: "Adult Volunteers", shiftStart: centralIso(seed.date, seed.start, -30), shiftEnd: centralIso(seed.date, seed.start, 60), capacity: 1, filled: 0, isOpen: true, isVisible: true, sortOrder: 100, instructions: "Early adult shift starts 30 minutes before the event and runs 1.5 hours." },
-      { id: slotId(index, 9), eventId, name: "Adult Volunteer - Late", category: "Adult Volunteers", shiftStart: centralIso(seed.date, seed.start, 60), shiftEnd: centralIso(seed.date, seed.end), capacity: 1, filled: 0, isOpen: true, isVisible: true, sortOrder: 101, instructions: "Late adult shift runs from the midpoint through the event end." },
-    ],
+    schedule,
+    slots: isDayOneTournament ? tournamentSlots : defaultSlots,
   };
 });
 
