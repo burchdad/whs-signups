@@ -1,17 +1,25 @@
 import { requireAdmin } from "@/lib/auth";
-import { canManage, canManageOrganizationSettings, canManageProgramPayments, getOrganizationEmailSettings, listAdminProgramsForSession } from "@/lib/admin-access";
-import { saveMyProgramStripeAccount, saveOrganizationEmailSettings, saveProgramNotificationEmails, updateMyPassword } from "../actions";
+import { canManage, canManageOrganizationSettings, canManageProgramPayments, getAdminProfile, getOrganizationEmailSettings, listAdminProgramsForSession } from "@/lib/admin-access";
+import { saveMyProfile, saveMyProgramStripeAccount, saveOrganizationEmailSettings, saveProgramNotificationEmails, updateMyPassword } from "../actions";
 
 export const metadata = { title: "Settings" };
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ password?: string; stripe?: string; email?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ password?: string; stripe?: string; email?: string; profile?: string }> }) {
   const session = await requireAdmin();
-  const [status, programs, emailSettings] = await Promise.all([searchParams, listAdminProgramsForSession(session), getOrganizationEmailSettings(session.organizationId)]);
+  const [status, programs, emailSettings, profile] = await Promise.all([searchParams, listAdminProgramsForSession(session), getOrganizationEmailSettings(session.organizationId), getAdminProfile(session.user.id)]);
   const boosterPrograms = programs.filter((program) => program.type === "booster_club");
   const configuredFrom = process.env.RESEND_FROM_EMAIL || "WHSSignups <noreply@whssignups.com>";
   const verifiedSenderAddress = configuredFrom.match(/<([^>]+)>/)?.[1] || configuredFrom;
 
   return <div className="grid max-w-3xl gap-6">
+    {profile ? <form action={saveMyProfile} className="wildcat-card grid gap-4 rounded-sm p-5">
+      <div><p className="eyebrow">Your profile</p><h1 className="text-3xl font-black uppercase text-[var(--ink)]">Personal details</h1><p className="mt-1 text-sm font-medium text-[var(--muted)]">Keep your contact information current. Your assigned role and programs can only be changed by the Super Admin.</p></div>
+      {status.profile === "updated" ? <p role="status" className="rounded-sm bg-[#f1fbf3] p-3 font-black text-[#225c2d]">Your profile was updated.</p> : null}
+      <div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-1.5"><span className="font-black uppercase tracking-wide">Name</span><input name="name" className="field" defaultValue={profile.name} required/></label><label className="grid gap-1.5"><span className="font-black uppercase tracking-wide">Email</span><input name="email" type="email" className="field" defaultValue={profile.email} required/></label></div>
+      <label className="grid gap-1.5"><span className="font-black uppercase tracking-wide">Phone number</span><input name="phone" type="tel" className="field" defaultValue={profile.phone} autoComplete="tel"/></label>
+      <button className="min-h-12 rounded-sm bg-[var(--maroon)] px-5 font-black uppercase tracking-wide text-white hover:bg-[var(--maroon-dark)]">Save personal details</button>
+    </form> : <section className="wildcat-card rounded-sm p-5"><p className="eyebrow">Your profile</p><h1 className="text-3xl font-black uppercase text-[var(--ink)]">Personal details</h1><p className="mt-2 font-medium text-[var(--muted)]">The bootstrap Super Admin name and email are managed in the hosting environment. Individual administrator accounts can update their details here.</p></section>}
+
     {canManageOrganizationSettings(session) ? <form action={saveOrganizationEmailSettings} className="wildcat-card grid gap-4 rounded-sm p-5">
       <div><p className="eyebrow">Organization delivery</p><h1 className="text-3xl font-black uppercase text-[var(--ink)]">Email settings</h1><p className="mt-1 text-sm font-medium text-[var(--muted)]">These settings replace hard-coded notification recipients. The sender must stay on the verified WHSSignups domain.</p></div>
       {status.email === "organization" ? <p role="status" className="rounded-sm bg-[#f1fbf3] p-3 font-black text-[#225c2d]">Organization email settings saved.</p> : null}

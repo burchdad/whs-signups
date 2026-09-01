@@ -304,6 +304,7 @@ const defaultBoosterPrograms = [
   { name: "Softball Booster Club", sports: ["Softball"] },
   { name: "Cheer Booster Club", sports: ["Cheerleading (Girls)"] },
   { name: "Dance Booster Club", sports: ["Dance"] },
+  { name: "Choir Booster Club", sports: ["Choir"] },
 ] as const;
 
 async function ensureDefaultBoosterPrograms() {

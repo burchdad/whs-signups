@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import { sendAdminInvitation, sendCancellationEmails } from "@/lib/email/service";
 import { cancelSignupById, createAdminEvent, createScheduleItem, createVolunteerSlot, createVolunteerTemplate, deleteScheduleItem, getSignupContextById, listAdminEvents, removeVolunteerSlot, saveSportPhoto, updateEventDetails, updateScheduleItem, updateSlotState, updateVolunteerSlot } from "@/lib/repository";
 import { participationAreas, sportsOffered, type SportName } from "@/lib/sports";
-import { adminRoles, canManage, canManageAdmins, canManageOrganizationSettings, canManageProgram, canManageProgramPayments, changeAdminPassword, createAdminAccount, createAdminInvite, createAdminProgram, getAssignableAdminOwner, hasSportAccess, parseEmailList, updateAdminProgramBilling, updateOrganizationEmailSettings, updateProgramNotificationEmails, updateProgramStripeAccount } from "@/lib/admin-access";
+import { adminRoles, canManage, canManageAdmins, canManageOrganizationSettings, canManageProgram, canManageProgramPayments, changeAdminPassword, createAdminAccount, createAdminInvite, createAdminProgram, getAssignableAdminOwner, hasSportAccess, parseEmailList, updateAdminAccount, updateAdminProfile, updateAdminProgramBilling, updateOrganizationEmailSettings, updateProgramNotificationEmails, updateProgramStripeAccount } from "@/lib/admin-access";
 import { adminNotificationRecipientsForSport } from "@/lib/admin-access";
 import { verifyConnectedStripeAccount } from "@/lib/stripe";
 import { centralLocalToIso } from "@/lib/utils";
@@ -270,6 +270,29 @@ export async function resendAdminInvitation(formData: FormData) {
   const delivery = await sendAdminInvitation(invitation);
   revalidatePath("/admin/access");
   redirect(`/admin/access?account=invited&invite=${delivery.status}`);
+}
+
+export async function editAdminAccount(formData: FormData) {
+  const session = await requireAdmin();
+  if (!canManageAdmins(session)) throw new Error("Only the Super Admin can manage accounts.");
+  const role = String(formData.get("role") ?? "volunteer_coordinator");
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name || !isEmail(email) || !adminRoles.includes(role as (typeof adminRoles)[number])) throw new Error("Enter a valid name, email, and role.");
+  await updateAdminAccount({ userId: String(formData.get("userId") ?? ""), organizationId: session.organizationId, name, email, phone: String(formData.get("phone") ?? ""), role: role as (typeof adminRoles)[number], programIds: formData.getAll("programIds").map(String), active: formData.get("active") === "on", actorId: session.user.id });
+  revalidatePath("/admin/access");
+  redirect("/admin/access?account=updated");
+}
+
+export async function saveMyProfile(formData: FormData) {
+  const session = await requireAdmin();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name || !isEmail(email)) throw new Error("Enter a valid name and email address.");
+  await updateAdminProfile({ userId: session.user.id, name, email, phone: String(formData.get("phone") ?? "") });
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin", "layout");
+  redirect("/admin/settings?profile=updated");
 }
 
 export async function updateMyPassword(formData: FormData) {

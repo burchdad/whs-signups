@@ -26,6 +26,7 @@ export function ensureAdminAccessSchema() {
         alter table admin_users add column if not exists invite_token_hash text;
         alter table admin_users add column if not exists invite_expires_at timestamptz;
         alter table admin_users add column if not exists invite_used_at timestamptz;
+        alter table admin_users add column if not exists phone text;
         create unique index if not exists admin_users_invite_token_idx on admin_users (invite_token_hash) where invite_token_hash is not null;
         create table if not exists admin_program_memberships (admin_user_id uuid not null references admin_users(id) on delete cascade, program_id uuid not null references admin_programs(id) on delete cascade, created_at timestamptz not null default now(), primary key (admin_user_id, program_id));
         create table if not exists admin_program_sports (program_id uuid not null references admin_programs(id) on delete cascade, sport_name text not null, primary key (program_id, sport_name));
@@ -53,6 +54,18 @@ export function ensureAdminAccessSchema() {
         create unique index if not exists booster_club_signups_checkout_session_idx on booster_club_signups (stripe_checkout_session_id) where stripe_checkout_session_id is not null;
         create unique index if not exists admin_programs_stripe_account_unique on admin_programs (stripe_account_id) where stripe_account_id is not null;
         update admin_programs set notification_emails=array[lower(notification_email)] where notification_email is not null and btrim(notification_email)<>'' and cardinality(notification_emails)=0;
+        insert into admin_programs (organization_id,name,program_type) values ('11111111-1111-4111-8111-111111111111','Choir Booster Club','booster_club') on conflict (organization_id,name) do update set program_type='booster_club';
+        insert into admin_program_sports (program_id,sport_name) select id,'Choir' from admin_programs where organization_id='11111111-1111-4111-8111-111111111111' and name='Choir Booster Club' on conflict do nothing;
+        do $$ declare emily_id uuid; begin
+          if not exists (select 1 from audit_logs where action='admin.emily_scope_seeded') then
+            select id into emily_id from admin_users where normalized_email='emilymillanes@gmail.com' limit 1;
+            if emily_id is not null then
+              update admin_users set role='program_admin',updated_at=now() where id=emily_id;
+              insert into admin_program_memberships (admin_user_id,program_id) select emily_id,p.id from admin_programs p where p.organization_id='11111111-1111-4111-8111-111111111111' and p.name in ('Whitehouse Community Booster Club','Choir Booster Club') on conflict do nothing;
+              insert into audit_logs (organization_id,actor_user_id,action,entity_type,entity_id,metadata) values ('11111111-1111-4111-8111-111111111111',null,'admin.emily_scope_seeded','admin_user',emily_id,'{}');
+            end if;
+          end if;
+        end $$;
       `);
     } finally {
       await client.query("select pg_advisory_unlock(hashtext('whssignups_admin_access'))").catch(() => undefined);
@@ -139,8 +152,36 @@ export async function listAdminProgramsForSession(session: AdminSession) {
 export async function listAdminAccounts() {
   await ensureAdminAccessSchema();
   if (!hasDatabaseUrl()) return [];
-  const { rows } = await getPool().query(`select u.id, u.email, u.display_name, u.role, u.is_active, u.must_change_password, u.invite_expires_at, u.invite_used_at, coalesce(array_agg(p.name order by p.name) filter (where p.id is not null), '{}') programs from admin_users u left join admin_program_memberships m on m.admin_user_id = u.id left join admin_programs p on p.id = m.program_id group by u.id order by u.display_name`);
-  return rows.map((row) => ({ id: String(row.id), email: String(row.email), name: String(row.display_name), role: String(row.role), active: Boolean(row.is_active), mustChangePassword: Boolean(row.must_change_password), inviteExpiresAt: row.invite_expires_at ? new Date(String(row.invite_expires_at)).toISOString() : undefined, inviteUsedAt: row.invite_used_at ? new Date(String(row.invite_used_at)).toISOString() : undefined, programs: row.programs as string[] }));
+  const { rows } = await getPool().query(`select u.id, u.email, u.display_name, u.phone, u.role, u.is_active, u.must_change_password, u.invite_expires_at, u.invite_used_at, coalesce(array_agg(p.name order by p.name) filter (where p.id is not null), '{}') programs, coalesce(array_agg(p.id::text order by p.name) filter (where p.id is not null), '{}') program_ids from admin_users u left join admin_program_memberships m on m.admin_user_id = u.id left join admin_programs p on p.id = m.program_id group by u.id order by u.display_name`);
+  return rows.map((row) => ({ id: String(row.id), email: String(row.email), name: String(row.display_name), phone: row.phone ? String(row.phone) : "", role: String(row.role), active: Boolean(row.is_active), mustChangePassword: Boolean(row.must_change_password), inviteExpiresAt: row.invite_expires_at ? new Date(String(row.invite_expires_at)).toISOString() : undefined, inviteUsedAt: row.invite_used_at ? new Date(String(row.invite_used_at)).toISOString() : undefined, programs: row.programs as string[], programIds: row.program_ids as string[] }));
+}
+
+export async function updateAdminAccount(input: { userId: string; organizationId: string; name: string; email: string; phone?: string; role: AdminRole; programIds: string[]; active: boolean; actorId: string }) {
+  await ensureAdminAccessSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query("begin");
+    const { rowCount } = await client.query("update admin_users set display_name=$1,email=$2,normalized_email=$3,phone=nullif($4,''),role=$5,is_active=$6,updated_at=now() where id=$7 and organization_id=$8", [input.name.trim(), input.email.trim(), normalizeEmail(input.email), input.phone?.trim() ?? "", input.role, input.active, input.userId, input.organizationId]);
+    if (!rowCount) throw new Error("Administrator account not found.");
+    await client.query("delete from admin_program_memberships where admin_user_id=$1", [input.userId]);
+    for (const programId of input.programIds) await client.query("insert into admin_program_memberships (admin_user_id,program_id) select $1,id from admin_programs where id=$2 and organization_id=$3 on conflict do nothing", [input.userId, programId, input.organizationId]);
+    await client.query("insert into audit_logs (organization_id,actor_user_id,action,entity_type,entity_id,metadata) values ($1,$2,'admin.updated','admin_user',$3,$4)", [input.organizationId, input.actorId, input.userId, JSON.stringify({ role: input.role, programIds: input.programIds, active: input.active })]);
+    await client.query("commit");
+  } catch (error) { await client.query("rollback"); throw error; } finally { client.release(); }
+}
+
+export async function getAdminProfile(userId: string) {
+  if (userId === "bootstrap-super-admin" || !hasDatabaseUrl()) return undefined;
+  await ensureAdminAccessSchema();
+  const { rows } = await getPool().query("select display_name,email,phone from admin_users where id=$1 and is_active=true", [userId]);
+  const row = rows[0];
+  return row ? { name: String(row.display_name), email: String(row.email), phone: row.phone ? String(row.phone) : "" } : undefined;
+}
+
+export async function updateAdminProfile(input: { userId: string; name: string; email: string; phone?: string }) {
+  if (input.userId === "bootstrap-super-admin") throw new Error("The bootstrap administrator profile is managed through hosting settings.");
+  await ensureAdminAccessSchema();
+  await getPool().query("update admin_users set display_name=$1,email=$2,normalized_email=$3,phone=nullif($4,''),updated_at=now() where id=$5 and is_active=true", [input.name.trim(), input.email.trim(), normalizeEmail(input.email), input.phone?.trim() ?? "", input.userId]);
 }
 
 export async function listAssignableAdminAccounts(session: AdminSession) {
