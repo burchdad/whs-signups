@@ -4,7 +4,8 @@ import { AdminLoginForm } from "@/components/forms/admin-login-form";
 
 export const metadata = { title: "Admin Login" };
 
-export default function AdminLoginPage() {
+export default async function AdminLoginPage({ searchParams }: { searchParams: Promise<{ invited?: string }> }) {
+  const status = await searchParams;
   return (
     <section className="athletic-band rounded-sm text-white">
       <div className="grid gap-8 p-6 md:grid-cols-[0.9fr_1.1fr] md:p-10">
@@ -25,6 +26,7 @@ export default function AdminLoginPage() {
               <h2 className="text-2xl font-black uppercase">Admin login</h2>
             </div>
           </div>
+          {status.invited === "1" ? <p role="status" className="rounded-sm bg-[#f1fbf3] p-3 font-black text-[#225c2d]">Your password is set. Sign in to continue.</p> : null}
           <AdminLoginForm />
           <p className="text-sm font-medium text-[var(--muted)]">Use your individual administrator email and password. Access is limited to your assigned programs.</p>
         </div>

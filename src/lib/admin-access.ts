@@ -1,4 +1,4 @@
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { getPool, hasDatabaseUrl } from "./db";
 import { normalizeEmail } from "./utils";
 
@@ -23,6 +23,10 @@ export function ensureAdminAccessSchema() {
       await client.query(`
         create table if not exists admin_programs (id uuid primary key default gen_random_uuid(), organization_id uuid not null references organizations(id) on delete cascade, name text not null, program_type text not null default 'booster_club', notification_email text, is_active boolean not null default true, created_at timestamptz not null default now(), unique (organization_id, name));
         create table if not exists admin_users (id uuid primary key default gen_random_uuid(), organization_id uuid not null references organizations(id) on delete cascade, email text not null, normalized_email text not null, display_name text not null, password_hash text not null, role text not null, is_active boolean not null default true, must_change_password boolean not null default true, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), unique (organization_id, normalized_email));
+        alter table admin_users add column if not exists invite_token_hash text;
+        alter table admin_users add column if not exists invite_expires_at timestamptz;
+        alter table admin_users add column if not exists invite_used_at timestamptz;
+        create unique index if not exists admin_users_invite_token_idx on admin_users (invite_token_hash) where invite_token_hash is not null;
         create table if not exists admin_program_memberships (admin_user_id uuid not null references admin_users(id) on delete cascade, program_id uuid not null references admin_programs(id) on delete cascade, created_at timestamptz not null default now(), primary key (admin_user_id, program_id));
         create table if not exists admin_program_sports (program_id uuid not null references admin_programs(id) on delete cascade, sport_name text not null, primary key (program_id, sport_name));
         alter table events add column if not exists admin_program_id uuid references admin_programs(id) on delete set null;
@@ -135,8 +139,8 @@ export async function listAdminProgramsForSession(session: AdminSession) {
 export async function listAdminAccounts() {
   await ensureAdminAccessSchema();
   if (!hasDatabaseUrl()) return [];
-  const { rows } = await getPool().query(`select u.id, u.email, u.display_name, u.role, u.is_active, coalesce(array_agg(p.name order by p.name) filter (where p.id is not null), '{}') programs from admin_users u left join admin_program_memberships m on m.admin_user_id = u.id left join admin_programs p on p.id = m.program_id group by u.id order by u.display_name`);
-  return rows.map((row) => ({ id: String(row.id), email: String(row.email), name: String(row.display_name), role: String(row.role), active: Boolean(row.is_active), programs: row.programs as string[] }));
+  const { rows } = await getPool().query(`select u.id, u.email, u.display_name, u.role, u.is_active, u.must_change_password, u.invite_expires_at, u.invite_used_at, coalesce(array_agg(p.name order by p.name) filter (where p.id is not null), '{}') programs from admin_users u left join admin_program_memberships m on m.admin_user_id = u.id left join admin_programs p on p.id = m.program_id group by u.id order by u.display_name`);
+  return rows.map((row) => ({ id: String(row.id), email: String(row.email), name: String(row.display_name), role: String(row.role), active: Boolean(row.is_active), mustChangePassword: Boolean(row.must_change_password), inviteExpiresAt: row.invite_expires_at ? new Date(String(row.invite_expires_at)).toISOString() : undefined, inviteUsedAt: row.invite_used_at ? new Date(String(row.invite_used_at)).toISOString() : undefined, programs: row.programs as string[] }));
 }
 
 export async function listAssignableAdminAccounts(session: AdminSession) {
@@ -252,13 +256,50 @@ export async function adminNotificationRecipientsForProgram(programId: string) {
   return rows.map((row) => String(row.email)).filter(Boolean);
 }
 
-export async function createAdminAccount(input: { organizationId: string; name: string; email: string; password: string; role: AdminRole; programIds: string[]; actorId: string }) {
+export function hashAdminInviteToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+export async function createAdminInvite(input: { userId: string; organizationId: string; actorId: string }) {
   await ensureAdminAccessSchema();
-  const { rows } = await getPool().query("insert into admin_users (organization_id,email,normalized_email,display_name,password_hash,role) values ($1,$2,$3,$4,$5,$6) returning id", [input.organizationId, input.email.trim(), normalizeEmail(input.email), input.name.trim(), hashAdminPassword(input.password), input.role]);
-  const id = String(rows[0].id);
-  for (const programId of input.programIds) await getPool().query("insert into admin_program_memberships (admin_user_id,program_id) values ($1,$2) on conflict do nothing", [id, programId]);
-  await getPool().query("insert into audit_logs (organization_id, actor_user_id, action, entity_type, entity_id, metadata) values ($1,$2,'admin.created','admin_user',$3,$4)", [input.organizationId, input.actorId, id, JSON.stringify({ email: input.email, role: input.role })]);
-  return id;
+  const token = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000);
+  const unusablePassword = hashAdminPassword(randomBytes(32).toString("base64url"));
+  const { rows } = await getPool().query("update admin_users set password_hash=$1, invite_token_hash=$2, invite_expires_at=$3, invite_used_at=null, must_change_password=true, updated_at=now() where id=$4 and organization_id=$5 and is_active=true returning id,email,display_name", [unusablePassword, hashAdminInviteToken(token), expiresAt, input.userId, input.organizationId]);
+  if (!rows[0]) throw new Error("Administrator account not found.");
+  await getPool().query("insert into audit_logs (organization_id, actor_user_id, action, entity_type, entity_id, metadata) values ($1,$2,'admin.invitation_created','admin_user',$3,$4)", [input.organizationId, input.actorId, input.userId, JSON.stringify({ expiresAt: expiresAt.toISOString() })]);
+  return { userId: String(rows[0].id), email: String(rows[0].email), name: String(rows[0].display_name), token, expiresAt };
+}
+
+export async function createAdminAccount(input: { organizationId: string; name: string; email: string; role: AdminRole; programIds: string[]; actorId: string }) {
+  await ensureAdminAccessSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query("begin");
+    const unusablePassword = hashAdminPassword(randomBytes(32).toString("base64url"));
+    const { rows } = await client.query("insert into admin_users (organization_id,email,normalized_email,display_name,password_hash,role) values ($1,$2,$3,$4,$5,$6) returning id", [input.organizationId, input.email.trim(), normalizeEmail(input.email), input.name.trim(), unusablePassword, input.role]);
+    const id = String(rows[0].id);
+    for (const programId of input.programIds) await client.query("insert into admin_program_memberships (admin_user_id,program_id) values ($1,$2) on conflict do nothing", [id, programId]);
+    await client.query("insert into audit_logs (organization_id, actor_user_id, action, entity_type, entity_id, metadata) values ($1,$2,'admin.created','admin_user',$3,$4)", [input.organizationId, input.actorId, id, JSON.stringify({ email: input.email, role: input.role })]);
+    await client.query("commit");
+    return id;
+  } catch (error) { await client.query("rollback"); throw error; } finally { client.release(); }
+}
+
+export async function getAdminInvite(token: string) {
+  if (!hasDatabaseUrl() || !token) return undefined;
+  await ensureAdminAccessSchema();
+  const { rows } = await getPool().query("select id,email,display_name,invite_expires_at from admin_users where invite_token_hash=$1 and is_active=true and invite_used_at is null and invite_expires_at > now() limit 1", [hashAdminInviteToken(token)]);
+  const row = rows[0];
+  return row ? { userId: String(row.id), email: String(row.email), name: String(row.display_name), expiresAt: new Date(String(row.invite_expires_at)).toISOString() } : undefined;
+}
+
+export async function acceptAdminInvite(input: { token: string; newPassword: string }) {
+  if (input.newPassword.length < 12) throw new Error("Passwords must contain at least 12 characters.");
+  await ensureAdminAccessSchema();
+  const { rows } = await getPool().query("update admin_users set password_hash=$1, must_change_password=false, invite_used_at=now(), invite_token_hash=null, updated_at=now() where invite_token_hash=$2 and is_active=true and invite_used_at is null and invite_expires_at > now() returning id,organization_id", [hashAdminPassword(input.newPassword), hashAdminInviteToken(input.token)]);
+  if (!rows[0]) throw new Error("This invitation is invalid or has expired.");
+  await getPool().query("insert into audit_logs (organization_id, actor_user_id, action, entity_type, entity_id, metadata) values ($1,$2,'admin.invitation_accepted','admin_user',$2,'{}')", [rows[0].organization_id, rows[0].id]);
 }
 
 export async function changeAdminPassword(input: { userId: string; currentPassword: string; newPassword: string }) {

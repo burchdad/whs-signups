@@ -58,6 +58,19 @@ async function send(input: { to: string | string[]; subject: string; text: strin
   }
 }
 
+export async function sendAdminInvitation(input: { userId: string; name: string; email: string; token: string; expiresAt: Date }) {
+  const setupUrl = appUrl(`/admin/invite/${input.token}`);
+  const subject = "Your WHSSignups administrator access";
+  const expires = input.expiresAt.toLocaleString("en-US", { timeZone: "America/Chicago", dateStyle: "long", timeStyle: "short" });
+  const text = `Hi ${input.name},\n\nYou have been granted administrator access to WHSSignups. Set your password using this secure link:\n${setupUrl}\n\nThis one-time link expires ${expires} Central Time. If you were not expecting this invitation, you can ignore this email.`;
+  const html = emailLayout(subject, "Set your password to activate your administrator access.", `<h1 style="margin-top:0;color:#43110e">Administrator access granted</h1><p>Hi ${escapeHtml(input.name)},</p><p>You have been granted administrator access to WHSSignups. Use the secure, one-time link below to create your password.</p><p>${button("Set my password", setupUrl)}</p><p style="color:#6d625d;font-size:13px">This link expires <strong>${escapeHtml(expires)} Central Time</strong>. If you were not expecting this invitation, you can ignore this email.</p>`);
+  return send({ to: input.email, subject, text, html, idempotencyKey: `admin-invite-${input.userId}-${hashForEmailKey(input.token)}` });
+}
+
+function hashForEmailKey(value: string) {
+  return Buffer.from(value).toString("base64url").slice(0, 32);
+}
+
 export async function sendSignupEmails(input: { signup: Signup; event: VolunteerEvent; slot: VolunteerSlot; cancellationToken: string; notificationEmails?: string[] }) {
   const cancelUrl = appUrl(`/cancel/${input.cancellationToken}`);
   const calendarUrl = googleCalendarUrl(input.event, input.slot);

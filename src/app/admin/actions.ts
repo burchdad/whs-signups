@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
-import { sendCancellationEmails } from "@/lib/email/service";
+import { sendAdminInvitation, sendCancellationEmails } from "@/lib/email/service";
 import { cancelSignupById, createAdminEvent, createScheduleItem, createVolunteerSlot, createVolunteerTemplate, deleteScheduleItem, getSignupContextById, listAdminEvents, removeVolunteerSlot, saveSportPhoto, updateEventDetails, updateScheduleItem, updateSlotState, updateVolunteerSlot } from "@/lib/repository";
 import { participationAreas, sportsOffered, type SportName } from "@/lib/sports";
-import { adminRoles, canManage, canManageAdmins, canManageOrganizationSettings, canManageProgram, canManageProgramPayments, changeAdminPassword, createAdminAccount, createAdminProgram, getAssignableAdminOwner, hasSportAccess, parseEmailList, updateAdminProgramBilling, updateOrganizationEmailSettings, updateProgramNotificationEmails, updateProgramStripeAccount } from "@/lib/admin-access";
+import { adminRoles, canManage, canManageAdmins, canManageOrganizationSettings, canManageProgram, canManageProgramPayments, changeAdminPassword, createAdminAccount, createAdminInvite, createAdminProgram, getAssignableAdminOwner, hasSportAccess, parseEmailList, updateAdminProgramBilling, updateOrganizationEmailSettings, updateProgramNotificationEmails, updateProgramStripeAccount } from "@/lib/admin-access";
 import { adminNotificationRecipientsForSport } from "@/lib/admin-access";
 import { verifyConnectedStripeAccount } from "@/lib/stripe";
 import { centralLocalToIso } from "@/lib/utils";
@@ -256,11 +256,20 @@ export async function addAdminAccount(formData: FormData) {
   if (!canManageAdmins(session)) throw new Error("Only the Super Admin can manage accounts.");
   const role = String(formData.get("role") ?? "volunteer_coordinator");
   if (!adminRoles.includes(role as (typeof adminRoles)[number])) throw new Error("Choose a valid role.");
-  const password = String(formData.get("temporaryPassword") ?? "");
-  if (password.length < 12) throw new Error("Temporary passwords must contain at least 12 characters.");
-  await createAdminAccount({ organizationId: session.organizationId, name: String(formData.get("name") ?? ""), email: String(formData.get("email") ?? ""), password, role: role as (typeof adminRoles)[number], programIds: formData.getAll("programIds").map(String), actorId: session.user.id });
+  const userId = await createAdminAccount({ organizationId: session.organizationId, name: String(formData.get("name") ?? ""), email: String(formData.get("email") ?? ""), role: role as (typeof adminRoles)[number], programIds: formData.getAll("programIds").map(String), actorId: session.user.id });
+  const invitation = await createAdminInvite({ userId, organizationId: session.organizationId, actorId: session.user.id });
+  const delivery = await sendAdminInvitation(invitation);
   revalidatePath("/admin/access");
-  redirect("/admin/access?account=created");
+  redirect(`/admin/access?account=created&invite=${delivery.status}`);
+}
+
+export async function resendAdminInvitation(formData: FormData) {
+  const session = await requireAdmin();
+  if (!canManageAdmins(session)) throw new Error("Only the Super Admin can manage accounts.");
+  const invitation = await createAdminInvite({ userId: String(formData.get("userId") ?? ""), organizationId: session.organizationId, actorId: session.user.id });
+  const delivery = await sendAdminInvitation(invitation);
+  revalidatePath("/admin/access");
+  redirect(`/admin/access?account=invited&invite=${delivery.status}`);
 }
 
 export async function updateMyPassword(formData: FormData) {
