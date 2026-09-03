@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cancelSignup } from "../actions";
 import { requireAdmin } from "@/lib/auth";
-import { adminSignupFilterQuery, filterAdminSignups, parseAdminSignupFilters } from "@/lib/admin-signup-filters";
+import { adminSignupFilterQuery, filterAdminSignups, parseAdminSignupFilters, type AdminSignupFilters, type AdminSignupSort } from "@/lib/admin-signup-filters";
 import { listAdminSignups } from "@/lib/repository";
 
 export const metadata = { title: "Manage Signups" };
@@ -19,6 +19,13 @@ function MultiFilter({ label, name, options, selected, allLabel }: { label: stri
       </div>
     </details>
   </fieldset>;
+}
+
+function SortableHeader({ label, field, filters, className = "px-3 py-3" }: { label: string; field: AdminSignupSort; filters: AdminSignupFilters; className?: string }) {
+  const active = filters.sort === field;
+  const nextDirection = active && filters.direction === "asc" ? "desc" : "asc";
+  const href = `/admin/signups?${adminSignupFilterQuery({ ...filters, sort: field, direction: nextDirection })}`;
+  return <th className={className} aria-sort={active ? filters.direction === "asc" ? "ascending" : "descending" : "none"}><Link href={href} className="inline-flex items-center gap-1.5 hover:text-[var(--maroon)]" title={`Sort ${label} ${nextDirection === "asc" ? "ascending" : "descending"}`}>{label}<span aria-hidden className={active ? "text-[var(--maroon)]" : "text-[var(--muted)]"}>{active ? filters.direction === "asc" ? "▲" : "▼" : "↕"}</span></Link></th>;
 }
 
 export default async function AdminSignupsPage({ searchParams }: { searchParams: SearchParams }) {
@@ -48,6 +55,7 @@ export default async function AdminSignupsPage({ searchParams }: { searchParams:
           <MultiFilter label="Status" name="status" options={[{ value: "confirmed", label: "Confirmed" }, { value: "waitlisted", label: "Waitlisted" }, { value: "cancelled", label: "Cancelled" }]} selected={filters.statuses} allLabel="All statuses"/>
           <label className="grid gap-1"><span className="text-sm font-black uppercase">Event date from</span><input name="from" type="date" className="field" defaultValue={filters.from}/></label>
           <label className="grid gap-1"><span className="text-sm font-black uppercase">Event date through</span><input name="to" type="date" className="field" defaultValue={filters.to}/></label>
+          <div className="grid grid-cols-2 gap-3 md:hidden"><label className="grid gap-1"><span className="text-sm font-black uppercase">Sort by</span><select name="sort" className="field" defaultValue={filters.sort}><option value="">Newest signup</option><option value="volunteer">Volunteer</option><option value="event">Event</option><option value="position">Position</option><option value="email">Email</option><option value="eventDate">Event date</option></select></label><label className="grid gap-1"><span className="text-sm font-black uppercase">Direction</span><select name="direction" className="field" defaultValue={filters.direction}><option value="asc">Ascending</option><option value="desc">Descending</option></select></label></div>
         </div>
         <div className="flex flex-wrap items-center gap-3"><button className="min-h-11 rounded-sm bg-[var(--maroon)] px-5 font-black uppercase text-white">Apply filters</button>{filtersActive ? <Link href="/admin/signups" className="min-h-11 rounded-sm border border-[var(--maroon)] px-5 py-2 font-black uppercase text-[var(--maroon)]">Clear filters</Link> : null}<span className="font-semibold text-[var(--muted)]">Showing {signups.length} of {allSignups.length} signups</span></div>
       </form>
@@ -55,7 +63,7 @@ export default async function AdminSignupsPage({ searchParams }: { searchParams:
       <div className="mt-7 hidden overflow-x-auto pb-2 md:block">
         <table className="w-full min-w-[1180px] table-fixed text-left text-sm xl:min-w-0">
           <colgroup><col className="w-[12%]"/><col className="w-[9%]"/><col className="w-[18%]"/><col className="w-[13%]"/><col className="w-[18%]"/><col className="w-[10%]"/><col className="w-[8%]"/><col className="w-[8%]"/><col className="w-[4%]"/></colgroup>
-          <thead><tr className="border-b border-[var(--border)] text-xs font-black uppercase tracking-wide text-[var(--maroon-dark)]"><th className="px-3 py-3 pl-0">Volunteer</th><th className="px-3 py-3">Sport/group</th><th className="px-3 py-3">Event</th><th className="px-3 py-3">Position</th><th className="px-3 py-3">Email</th><th className="px-3 py-3">Phone</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Event date</th><th className="py-3 pl-3"></th></tr></thead>
+          <thead><tr className="border-b border-[var(--border)] text-xs font-black uppercase tracking-wide text-[var(--maroon-dark)]"><SortableHeader label="Volunteer" field="volunteer" filters={filters} className="px-3 py-3 pl-0"/><th className="px-3 py-3">Sport/group</th><SortableHeader label="Event" field="event" filters={filters}/><SortableHeader label="Position" field="position" filters={filters}/><SortableHeader label="Email" field="email" filters={filters}/><th className="px-3 py-3">Phone</th><th className="px-3 py-3">Status</th><SortableHeader label="Event date" field="eventDate" filters={filters}/><th className="py-3 pl-3"></th></tr></thead>
           <tbody>{signups.map((signup) => <tr key={signup.id} className="border-b border-[var(--border)] align-top font-medium"><td className="px-3 py-4 pl-0 font-black leading-5 text-[var(--ink)]">{signup.firstName} {signup.lastName}</td><td className="px-3 py-4 leading-5">{signup.sport}</td><td className="px-3 py-4 leading-5">{signup.eventTitle}</td><td className="px-3 py-4 leading-5">{signup.slotName}</td><td className="px-3 py-4 leading-5"><span className="break-all">{signup.email}</span></td><td className="px-3 py-4 leading-5">{signup.phone}</td><td className="px-3 py-4 capitalize leading-5">{signup.status}</td><td className="whitespace-nowrap px-3 py-4 leading-5">{new Date(`${signup.eventDate}T12:00:00`).toLocaleDateString()}</td><td className="py-4 pl-3">{session.user.role !== "roster_viewer" && ["confirmed", "waitlisted"].includes(signup.status) ? <form action={cancelSignup}><input type="hidden" name="signupId" value={signup.id}/><button className="font-black uppercase tracking-wide text-[var(--maroon)]">Cancel</button></form> : null}</td></tr>)}</tbody>
         </table>
       </div>

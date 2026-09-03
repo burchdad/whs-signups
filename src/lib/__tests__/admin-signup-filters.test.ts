@@ -23,4 +23,12 @@ describe("admin signup filters", () => {
     const filters = parseAdminSignupFilters(new URLSearchParams("sport=Volleyball&sport=Choir&status=confirmed&status=waitlisted"));
     expect(filterAdminSignups(signups, filters).map((signup) => signup.id)).toEqual(["1", "2"]);
   });
+
+  it("sorts marked columns in either direction and preserves the sort query", () => {
+    const ascending = parseAdminSignupFilters(new URLSearchParams("sort=volunteer&direction=asc"));
+    const descending = parseAdminSignupFilters(new URLSearchParams("sort=eventDate&direction=desc"));
+    expect(filterAdminSignups(signups, ascending).map((signup) => signup.id)).toEqual(["1", "2"]);
+    expect(filterAdminSignups(signups, descending).map((signup) => signup.id)).toEqual(["2", "1"]);
+    expect(adminSignupFilterQuery(descending)).toContain("sort=eventDate&direction=desc");
+  });
 });
