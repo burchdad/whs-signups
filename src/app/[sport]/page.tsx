@@ -1,18 +1,47 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BrandHeader } from "@/components/brand-header";
 import { EventCard } from "@/components/event-card";
 import { SportPhoto } from "@/components/sport-photo";
 import { getSportPhotoMap, listPublicEvents } from "@/lib/repository";
+import { appUrl } from "@/lib/utils";
 import { publicSportsOffered, sportFromSlug, sportSlug } from "@/lib/sports";
 
 export function generateStaticParams() {
   return publicSportsOffered.map((sport) => ({ sport: sportSlug(sport) }));
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ sport: string }> }) {
+export async function generateMetadata({ params }: { params: Promise<{ sport: string }> }): Promise<Metadata> {
   const sport = sportFromSlug((await params).sport);
-  return { title: sport ? `${sport} Signups` : "Sport Signups" };
+  if (!sport) return { title: "Sport Signups" };
+  const slug = sportSlug(sport);
+  const photoMap = await getSportPhotoMap();
+  const photo = photoMap[sport]?.[0];
+  const title = `${sport} Signups`;
+  const description = `Volunteer events and Booster Club interest for Whitehouse ${sport}.`;
+  const url = appUrl(`/${slug}`);
+  const imageUrl = appUrl(photo?.src ?? "/brand/whs-logo.png");
+  const imageAlt = photo?.alt ?? `Whitehouse Wildcats ${sport} signups`;
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: `${title} | WHSSignups`,
+      description,
+      url,
+      siteName: "WHSSignups",
+      type: "website",
+      images: [{ url: imageUrl, alt: imageAlt }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} | WHSSignups`,
+      description,
+      images: [imageUrl],
+    },
+  };
 }
 
 export default async function SportPage({ params }: { params: Promise<{ sport: string }> }) {
