@@ -80,6 +80,7 @@ export type AdminSignupRow = Signup & {
   eventTitle: string;
   eventDate: string;
   slotName: string;
+  sport: string;
 };
 
 export type BoosterClubSignup = {

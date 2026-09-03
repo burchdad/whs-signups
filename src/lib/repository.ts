@@ -262,13 +262,13 @@ export async function listAdminSignups(limit = 200, allowedSports: string[] | nu
     return sampleSignups.slice(0, limit).map((signup) => {
       const event = events.find((candidate) => candidate.id === signup.eventId);
       const slot = event?.slots.find((candidate) => candidate.id === signup.slotId);
-      return { ...signup, eventTitle: event?.title ?? "", eventDate: event?.eventDate ?? "", slotName: slot?.name ?? "" };
+      return { ...signup, eventTitle: event?.title ?? "", eventDate: event?.eventDate ?? "", slotName: slot?.name ?? "", sport: event?.sport ?? "" };
     });
   }
   try {
     const { rows } = await getPool().query(
       `
-      select s.*, e.title as event_title, e.event_date, vs.name as slot_name
+      select s.*, e.title as event_title, e.event_date, vs.name as slot_name, coalesce(sp.name,'') as sport_name
       from signups s
       join events e on e.id = s.event_id
       left join sports sp on sp.id = e.sport_id
@@ -279,7 +279,7 @@ export async function listAdminSignups(limit = 200, allowedSports: string[] | nu
       `,
       [limit, allowedSports],
     );
-    return rows.map((row) => ({ ...rowToSignup(row), eventTitle: String(row.event_title), eventDate: toDateOnly(row.event_date), slotName: String(row.slot_name) }));
+    return rows.map((row) => ({ ...rowToSignup(row), eventTitle: String(row.event_title), eventDate: toDateOnly(row.event_date), slotName: String(row.slot_name), sport: String(row.sport_name) }));
   } catch (error) {
     if (isMissingDatabaseSchema(error)) return [];
     throw error;

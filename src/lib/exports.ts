@@ -46,10 +46,11 @@ export function signupsToCsv(events: VolunteerEvent[], signups: Signup[]) {
 }
 
 export function adminSignupsToCsv(signups: AdminSignupRow[]) {
-  const rows = [["Event Date", "Event", "Volunteer Position", "Volunteer Name", "Email", "Phone", "Status", "Signup Date", "Notes"]];
+  const rows = [["Event Date", "Sport or Group", "Event", "Volunteer Position", "Volunteer Name", "Email", "Phone", "Status", "Signup Date", "Notes"]];
   for (const signup of signups) {
     rows.push([
       signup.eventDate,
+      signup.sport,
       signup.eventTitle,
       signup.slotName,
       `${signup.firstName} ${signup.lastName}`,
