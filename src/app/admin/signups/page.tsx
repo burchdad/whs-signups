@@ -38,7 +38,7 @@ export default async function AdminSignupsPage({ searchParams }: { searchParams:
       <Link href={`/api/exports/signups${exportQuery ? `?${exportQuery}` : ""}`} className="min-h-11 rounded-sm bg-[var(--maroon)] px-4 py-2 font-black uppercase tracking-wide text-white hover:bg-[var(--maroon-dark)]">Export {filtersActive ? "filtered " : ""}CSV</Link>
     </div>
 
-    <section className="wildcat-card mt-6 rounded-sm p-5">
+    <section className="wildcat-card mt-6 rounded-sm p-6">
       <form method="get" className="grid gap-4">
         <label className="grid gap-1"><span className="text-sm font-black uppercase">Search</span><input name="q" className="field" defaultValue={filters.q} placeholder="Volunteer, email, phone, event, date, or position"/></label>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -52,10 +52,11 @@ export default async function AdminSignupsPage({ searchParams }: { searchParams:
         <div className="flex flex-wrap items-center gap-3"><button className="min-h-11 rounded-sm bg-[var(--maroon)] px-5 font-black uppercase text-white">Apply filters</button>{filtersActive ? <Link href="/admin/signups" className="min-h-11 rounded-sm border border-[var(--maroon)] px-5 py-2 font-black uppercase text-[var(--maroon)]">Clear filters</Link> : null}<span className="font-semibold text-[var(--muted)]">Showing {signups.length} of {allSignups.length} signups</span></div>
       </form>
 
-      <div className="mt-5 overflow-x-auto">
-        <table className="w-full min-w-[900px] text-left text-sm">
-          <thead><tr className="border-b border-[var(--border)] text-xs font-black uppercase tracking-wide text-[var(--maroon-dark)]"><th className="py-2">Volunteer</th><th>Sport/group</th><th>Event</th><th>Position</th><th>Email</th><th>Phone</th><th>Status</th><th>Event date</th><th></th></tr></thead>
-          <tbody>{signups.map((signup) => <tr key={signup.id} className="border-b border-[var(--border)] font-medium"><td className="py-3 font-black text-[var(--ink)]">{signup.firstName} {signup.lastName}</td><td>{signup.sport}</td><td>{signup.eventTitle}</td><td>{signup.slotName}</td><td>{signup.email}</td><td>{signup.phone}</td><td className="capitalize">{signup.status}</td><td>{new Date(`${signup.eventDate}T12:00:00`).toLocaleDateString()}</td><td>{session.user.role !== "roster_viewer" && ["confirmed", "waitlisted"].includes(signup.status) ? <form action={cancelSignup}><input type="hidden" name="signupId" value={signup.id}/><button className="font-black uppercase tracking-wide text-[var(--maroon)]">Cancel</button></form> : null}</td></tr>)}</tbody>
+      <div className="mt-7 overflow-x-auto pb-2">
+        <table className="w-full min-w-[1400px] table-fixed text-left text-sm">
+          <colgroup><col className="w-[165px]"/><col className="w-[125px]"/><col className="w-[260px]"/><col className="w-[175px]"/><col className="w-[250px]"/><col className="w-[140px]"/><col className="w-[110px]"/><col className="w-[115px]"/><col className="w-[80px]"/></colgroup>
+          <thead><tr className="border-b border-[var(--border)] text-xs font-black uppercase tracking-wide text-[var(--maroon-dark)]"><th className="px-3 py-3 pl-0">Volunteer</th><th className="px-3 py-3">Sport/group</th><th className="px-3 py-3">Event</th><th className="px-3 py-3">Position</th><th className="px-3 py-3">Email</th><th className="px-3 py-3">Phone</th><th className="px-3 py-3">Status</th><th className="px-3 py-3">Event date</th><th className="py-3 pl-3"></th></tr></thead>
+          <tbody>{signups.map((signup) => <tr key={signup.id} className="border-b border-[var(--border)] align-top font-medium"><td className="px-3 py-4 pl-0 font-black leading-5 text-[var(--ink)]">{signup.firstName} {signup.lastName}</td><td className="px-3 py-4 leading-5">{signup.sport}</td><td className="px-3 py-4 leading-5">{signup.eventTitle}</td><td className="px-3 py-4 leading-5">{signup.slotName}</td><td className="px-3 py-4 leading-5"><span className="break-all">{signup.email}</span></td><td className="px-3 py-4 leading-5">{signup.phone}</td><td className="px-3 py-4 capitalize leading-5">{signup.status}</td><td className="whitespace-nowrap px-3 py-4 leading-5">{new Date(`${signup.eventDate}T12:00:00`).toLocaleDateString()}</td><td className="py-4 pl-3">{session.user.role !== "roster_viewer" && ["confirmed", "waitlisted"].includes(signup.status) ? <form action={cancelSignup}><input type="hidden" name="signupId" value={signup.id}/><button className="font-black uppercase tracking-wide text-[var(--maroon)]">Cancel</button></form> : null}</td></tr>)}</tbody>
         </table>
         {signups.length === 0 ? <p className="py-10 text-center font-semibold text-[var(--muted)]">No signups match these filters.</p> : null}
       </div>
