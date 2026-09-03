@@ -14,8 +14,13 @@ describe("admin signup filters", () => {
   });
 
   it("round-trips active filters into an export query", () => {
-    const filters = parseAdminSignupFilters({ event: "event-2", position: "Ticket Table" });
-    expect(new URLSearchParams(adminSignupFilterQuery(filters)).get("event")).toBe("event-2");
+    const filters = parseAdminSignupFilters({ event: ["event-1", "event-2"], position: "Ticket Table" });
+    expect(new URLSearchParams(adminSignupFilterQuery(filters)).getAll("event")).toEqual(["event-1", "event-2"]);
     expect(filterAdminSignups(signups, filters).map((signup) => signup.id)).toEqual(["2"]);
+  });
+
+  it("matches any selected value within each filter category", () => {
+    const filters = parseAdminSignupFilters(new URLSearchParams("sport=Volleyball&sport=Choir&status=confirmed&status=waitlisted"));
+    expect(filterAdminSignups(signups, filters).map((signup) => signup.id)).toEqual(["1", "2"]);
   });
 });

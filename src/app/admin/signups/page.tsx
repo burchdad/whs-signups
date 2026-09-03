@@ -9,6 +9,18 @@ export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+function MultiFilter({ label, name, options, selected, allLabel }: { label: string; name: string; options: Array<{ value: string; label: string }>; selected: string[]; allLabel: string }) {
+  return <fieldset className="grid gap-1">
+    <legend className="text-sm font-black uppercase">{label}</legend>
+    <details className="relative rounded-sm border border-[var(--border)] bg-white">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 font-semibold"><span className="truncate">{selected.length ? `${selected.length} selected` : allLabel}</span><span aria-hidden>▾</span></summary>
+      <div className="absolute left-0 right-0 z-20 max-h-72 overflow-y-auto border border-[var(--border)] bg-white p-2 shadow-xl">
+        {options.map((option) => <label key={option.value} className="flex cursor-pointer items-start gap-2 rounded-sm p-2 hover:bg-[#fff8ef]"><input type="checkbox" name={name} value={option.value} defaultChecked={selected.includes(option.value)} className="mt-1"/><span className="text-sm font-medium">{option.label}</span></label>)}
+      </div>
+    </details>
+  </fieldset>;
+}
+
 export default async function AdminSignupsPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireAdmin();
   const filters = parseAdminSignupFilters(await searchParams);
@@ -30,10 +42,10 @@ export default async function AdminSignupsPage({ searchParams }: { searchParams:
       <form method="get" className="grid gap-4">
         <label className="grid gap-1"><span className="text-sm font-black uppercase">Search</span><input name="q" className="field" defaultValue={filters.q} placeholder="Volunteer, email, phone, event, date, or position"/></label>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <label className="grid gap-1"><span className="text-sm font-black uppercase">Sport or group</span><select name="sport" className="field" defaultValue={filters.sport}><option value="">All sports and groups</option>{sports.map((sport) => <option key={sport}>{sport}</option>)}</select></label>
-          <label className="grid gap-1"><span className="text-sm font-black uppercase">Event</span><select name="event" className="field" defaultValue={filters.event}><option value="">All events</option>{events.map((event) => <option key={event.id} value={event.id}>{event.date} — {event.title}</option>)}</select></label>
-          <label className="grid gap-1"><span className="text-sm font-black uppercase">Position</span><select name="position" className="field" defaultValue={filters.position}><option value="">All positions</option>{positions.map((position) => <option key={position}>{position}</option>)}</select></label>
-          <label className="grid gap-1"><span className="text-sm font-black uppercase">Status</span><select name="status" className="field" defaultValue={filters.status}><option value="">All statuses</option><option value="confirmed">Confirmed</option><option value="waitlisted">Waitlisted</option><option value="cancelled">Cancelled</option></select></label>
+          <MultiFilter label="Sport or group" name="sport" options={sports.map((sport) => ({ value: sport, label: sport }))} selected={filters.sports} allLabel="All sports and groups"/>
+          <MultiFilter label="Event" name="event" options={events.map((event) => ({ value: event.id, label: `${event.date} — ${event.title}` }))} selected={filters.events} allLabel="All events"/>
+          <MultiFilter label="Position" name="position" options={positions.map((position) => ({ value: position, label: position }))} selected={filters.positions} allLabel="All positions"/>
+          <MultiFilter label="Status" name="status" options={[{ value: "confirmed", label: "Confirmed" }, { value: "waitlisted", label: "Waitlisted" }, { value: "cancelled", label: "Cancelled" }]} selected={filters.statuses} allLabel="All statuses"/>
           <label className="grid gap-1"><span className="text-sm font-black uppercase">Event date from</span><input name="from" type="date" className="field" defaultValue={filters.from}/></label>
           <label className="grid gap-1"><span className="text-sm font-black uppercase">Event date through</span><input name="to" type="date" className="field" defaultValue={filters.to}/></label>
         </div>
