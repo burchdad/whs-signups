@@ -159,6 +159,11 @@ export type BoosterClubSignupResult =
   | { ok: true; id: string; program: BoosterProgram }
   | { ok: false; code: "not_ready" | "failed"; message: string };
 
+export type CancellationResult = {
+  cancelled: Signup;
+  promoted?: { signup: Signup; cancellationToken: string };
+};
+
 export async function createSignup(input: SignupInput): Promise<SignupResult> {
   if (hasDatabaseUrl()) {
     try {
@@ -419,8 +424,8 @@ export async function removeVolunteerSlot(input: { id: string; eventId: string }
 }
 
 export async function cancelSignupById(id: string) {
-  if (!hasDatabaseUrl()) return;
-  await getPool().query("update signups set status = 'cancelled', cancelled_at = now(), updated_at = now() where id = $1 and status in ('confirmed', 'waitlisted')", [id]);
+  if (!hasDatabaseUrl()) return undefined;
+  return withTransaction((client) => cancelSignupAndPromoteWaitlist(client, "id", id));
 }
 
 async function ensureSportMediaTable() {
@@ -682,7 +687,7 @@ export async function getCancellationByToken(token: string) {
       from signups s
       join volunteer_slots vs on vs.id = s.slot_id
       join events e on e.id = s.event_id
-      where s.cancellation_token_hash = $1 and s.status = 'confirmed'
+      where s.cancellation_token_hash = $1 and s.status in ('confirmed', 'waitlisted')
       limit 1
       `,
       [hashToken(token)],
@@ -736,19 +741,65 @@ export async function recordEmailDelivery(input: { signupId: string; recipient: 
 
 export async function cancelSignupByToken(token: string) {
   if (hasDatabaseUrl()) {
-    const { rows } = await getPool().query(
-      `
-      update signups
-      set status = 'cancelled', cancelled_at = now(), updated_at = now()
-      where cancellation_token_hash = $1 and status = 'confirmed'
-      returning *
-      `,
-      [hashToken(token)],
-    );
-    if (!rows[0]) throw new Error("Invalid or previously used cancellation link.");
-    return rowToSignup(rows[0]);
+    return withTransaction((client) => cancelSignupAndPromoteWaitlist(client, "token", hashToken(token)));
   }
-  return getCancellationByToken(token);
+  const found = await getCancellationByToken(token);
+  if (!found) throw new Error("Invalid or previously used cancellation link.");
+  return { cancelled: found.signup };
+}
+
+async function cancelSignupAndPromoteWaitlist(client: { query: (text: string, values?: unknown[]) => Promise<{ rows: Array<Record<string, unknown>> }> }, mode: "id" | "token", value: string): Promise<CancellationResult> {
+  const lookupColumn = mode === "id" ? "id" : "cancellation_token_hash";
+  const { rows: existingRows } = await client.query(
+    `
+    select s.*, vs.capacity
+    from signups s
+    join volunteer_slots vs on vs.id = s.slot_id
+    where s.${lookupColumn} = $1 and s.status in ('confirmed', 'waitlisted')
+    for update of s, vs
+    `,
+    [value],
+  );
+  const existing = existingRows[0];
+  if (!existing) throw new Error(mode === "token" ? "Invalid or previously used cancellation link." : "Signup not found.");
+  const wasConfirmed = String(existing.status) === "confirmed";
+  const { rows } = await client.query(
+    `
+    update signups
+    set status = 'cancelled', cancelled_at = now(), updated_at = now()
+    where id = $1
+    returning *
+    `,
+    [existing.id],
+  );
+  const cancelled = rowToSignup(rows[0]);
+  if (!wasConfirmed) return { cancelled };
+
+  const active = await client.query("select count(*)::int as count from signups where slot_id = $1 and status = 'confirmed'", [cancelled.slotId]);
+  if (Number(active.rows[0]?.count ?? 0) >= Number(existing.capacity)) return { cancelled };
+
+  const cancellationToken = createToken();
+  const confirmationToken = createToken();
+  const promoted = await client.query(
+    `
+    update signups
+    set status = 'confirmed',
+        confirmation_token_hash = $2,
+        cancellation_token_hash = $3,
+        updated_at = now()
+    where id = (
+      select id
+      from signups
+      where slot_id = $1 and status = 'waitlisted'
+      order by created_at asc
+      limit 1
+      for update skip locked
+    )
+    returning *
+    `,
+    [cancelled.slotId, hashToken(confirmationToken), hashToken(cancellationToken)],
+  );
+  return promoted.rows[0] ? { cancelled, promoted: { signup: rowToSignup(promoted.rows[0]), cancellationToken } } : { cancelled };
 }
 
 function friendlySignupError(message: string) {

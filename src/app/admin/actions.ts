@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
-import { sendAdminInvitation, sendCancellationEmails } from "@/lib/email/service";
+import { sendAdminInvitation, sendCancellationEmails, sendSignupEmails } from "@/lib/email/service";
 import { cancelSignupById, createAdminEvent, createScheduleItem, createVolunteerSlot, createVolunteerTemplate, deleteScheduleItem, getSignupContextById, listAdminEvents, removeVolunteerSlot, saveSportPhoto, updateEventDetails, updateScheduleItem, updateSlotState, updateVolunteerSlot } from "@/lib/repository";
 import { participationAreas, sportsOffered, type SportName } from "@/lib/sports";
 import { adminRoles, canManage, canManageAdmins, canManageOrganizationSettings, canManageProgram, canManageProgramPayments, changeAdminPassword, createAdminAccount, createAdminInvite, createAdminProgram, getAssignableAdminOwner, hasSportAccess, parseEmailList, updateAdminAccount, updateAdminProfile, updateAdminProgramBilling, updateOrganizationEmailSettings, updateProgramNotificationEmails, updateProgramStripeAccount } from "@/lib/admin-access";
@@ -161,8 +161,12 @@ export async function cancelSignup(formData: FormData) {
   const id = String(formData.get("signupId") ?? "");
   const found = await getSignupContextById(id, session.allowedSports);
   if (!found) throw new Error("You do not have access to this signup.");
-  await cancelSignupById(id);
+  const result = await cancelSignupById(id);
   if (found) await sendCancellationEmails({ ...found, notificationEmails: await adminNotificationRecipientsForSport(found.event.sport) });
+  if (result?.promoted) {
+    const promoted = await getSignupContextById(result.promoted.signup.id, session.allowedSports);
+    if (promoted) await sendSignupEmails({ signup: result.promoted.signup, event: promoted.event, slot: promoted.slot, cancellationToken: result.promoted.cancellationToken, notificationEmails: await adminNotificationRecipientsForSport(promoted.event.sport) });
+  }
   revalidatePath("/admin");
   revalidatePath("/admin/signups");
 }
