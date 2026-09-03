@@ -44,7 +44,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           {visibleNav.map(([href, label]) => <Link key={href} href={href} className="rounded-sm px-3 py-2 text-white/80 hover:bg-white/10 hover:text-white">{label}</Link>)}
         </nav>
       </header>
-      <main className="container py-8">{children}</main>
+      <main className="w-full px-4 py-8 sm:px-6 xl:px-8">{children}</main>
     </div>
   );
 }
