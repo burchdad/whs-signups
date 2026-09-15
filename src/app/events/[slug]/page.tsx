@@ -1,14 +1,34 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BrandHeader } from "@/components/brand-header";
 import { isEventSignupOpen, isSlotAvailable, remainingCount } from "@/lib/availability";
-import { getPublicEventBySlug } from "@/lib/repository";
+import { getPublicEventBySlug, getSportPhotoMap } from "@/lib/repository";
 import { formatDateTime } from "@/lib/utils";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const event = await getPublicEventBySlug(slug);
-  return { title: event?.title ?? "Event" };
+  if (!event) return { title: "Event" };
+  const photo = Object.entries(await getSportPhotoMap()).find(([sport]) => sport === event.sport)?.[1]?.[0];
+  const description = event.description || `Volunteer signup for ${event.title}.`;
+  return {
+    title: event.title,
+    description,
+    openGraph: {
+      title: `${event.title} | WHSSignups`,
+      description,
+      url: `/events/${event.slug}`,
+      type: "website",
+      ...(photo ? { images: [{ url: photo.src, alt: photo.alt }] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${event.title} | WHSSignups`,
+      description,
+      ...(photo ? { images: [photo.src] } : {}),
+    },
+  } satisfies Metadata;
 }
 
 export default async function EventDetailPage({ params }: { params: Promise<{ slug: string }> }) {

@@ -26,6 +26,20 @@ export const metadata: Metadata = {
     url: "https://whssignups.com",
     siteName: "WHSSignups",
     type: "website",
+    images: [
+      {
+        url: "/brand/whssignups-social.jpg",
+        width: 225,
+        height: 225,
+        alt: "Whitehouse Wildcat surrounded by Whitehouse sports",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "WHSSignups",
+    description: "Supporting Whitehouse students, teams, and events, one volunteer at a time.",
+    images: ["/brand/whssignups-social.jpg"],
   },
 };
 
