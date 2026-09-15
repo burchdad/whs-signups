@@ -13,8 +13,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const publicAppUrl = process.env.NEXT_PUBLIC_APP_URL?.includes("whssignups.com")
+  ? "https://whssignups.com"
+  : (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000");
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+  metadataBase: new URL(publicAppUrl),
   title: {
     default: "WHSSignups",
     template: "%s | WHSSignups",
@@ -29,14 +33,14 @@ export const metadata: Metadata = {
     images: [
       {
         url: "/brand/whssignups-social.jpg",
-        width: 225,
-        height: 225,
+        width: 1200,
+        height: 630,
         alt: "Whitehouse Wildcat surrounded by Whitehouse sports",
       },
     ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "WHSSignups",
     description: "Supporting Whitehouse students, teams, and events, one volunteer at a time.",
     images: ["/brand/whssignups-social.jpg"],
