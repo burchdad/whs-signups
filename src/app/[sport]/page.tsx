@@ -8,6 +8,9 @@ import { getSportPhotoMap, listPublicEvents } from "@/lib/repository";
 import { appUrl } from "@/lib/utils";
 import { publicSportsOffered, sportFromSlug, sportSlug } from "@/lib/sports";
 
+// Published events and volunteer availability must stay current.
+export const dynamic = "force-dynamic";
+
 export function generateStaticParams() {
   return publicSportsOffered.map((sport) => ({ sport: sportSlug(sport) }));
 }
